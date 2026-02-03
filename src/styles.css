@@ -1,3 +1,13 @@
+/* Leaflet Draw Icon Fixes */
+.leaflet-draw-toolbar a {
+  background-image: url('/assets/images/spritesheet.png') !important;
+  background-repeat: no-repeat;
+}
+.leaflet-retina .leaflet-draw-toolbar a {
+  background-image: url('/assets/images/spritesheet-2x.png') !important;
+  background-size: 300px 30px;
+}
+
 @import "tailwindcss";
 
 /* Standard CSS Variables */

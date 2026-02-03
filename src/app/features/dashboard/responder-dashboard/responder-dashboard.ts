@@ -134,7 +134,7 @@ export class ResponderDashboard {
   }
 
   navToMap() {
-    this.router.navigate(['/map']);
+    this.router.navigate(['/inicio']);
   }
 
   async logout() {

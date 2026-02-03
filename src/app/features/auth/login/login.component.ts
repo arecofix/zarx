@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
@@ -17,6 +17,11 @@ import { AuthService } from '../../../core/services/auth.service';
         <div class="absolute top-0 -left-1/4 w-1/2 h-1/2 bg-sky-500/10 rounded-full blur-[100px] animate-pulse"></div>
         <div class="absolute bottom-0 -right-1/4 w-1/2 h-1/2 bg-blue-600/10 rounded-full blur-[100px] animate-pulse" style="animation-delay: 1s;"></div>
         <div class="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-size-[50px_50px] mask-[radial-gradient(ellipse_at_center,black,transparent_80%)]"></div>
+      </div>
+
+      <!-- Logo Only (No Back Button) -->
+      <div class="absolute top-4 right-4 z-50">
+         <h1 class="text-xl font-black text-white tracking-tighter drop-shadow-md opacity-80">ZARX <span class="text-sky-400 text-xs align-top">SYS</span></h1>
       </div>
 
       <!-- Login Card -->
@@ -107,6 +112,14 @@ import { AuthService } from '../../../core/services/auth.service';
                   I accept the <a href="#" class="text-sky-400">Terms</a>. Public Username.
                 </label>
               </div>
+
+              <!-- Data Consent Checkbox -->
+              <div class="flex items-start gap-2 mt-1 p-2 bg-slate-800/50 rounded-lg border border-white/5">
+                <input type="checkbox" formControlName="dataConsent" id="dataConsent" class="mt-0.5 w-3.5 h-3.5 rounded border-slate-600 bg-slate-700 text-sky-500 focus:ring-sky-500">
+                <label for="dataConsent" class="text-[10px] text-slate-400 leading-tight">
+                   Consiento expresamente el tratamiento de mis datos de geolocalizacion y biometricos para fines de seguridad preventiva y validacion de identidad.
+                </label>
+              </div>
             }
 
             <!-- Main Button -->
@@ -147,7 +160,7 @@ export class LoginComponent {
   private router = inject(Router);
   
   rateLimitCooldown = signal(0);
-  private cooldownInterval: any;
+  private cooldownInterval: ReturnType<typeof setInterval> | undefined;
 
   isLoading = signal(false);
   isSignUp = signal(false);
@@ -159,25 +172,37 @@ export class LoginComponent {
     fullName: [''],
     phone: [''],
     username: [''],
-    terms: [false]
+    terms: [false],
+    dataConsent: [false]
   });
 
   constructor() {
+     // Auto-redirect if already logged in (e.g. after OAuth redirect)
+     effect(() => {
+        if (this.authService.currentUser()) {
+           this.router.navigate(['/inicio']);
+        }
+     });
+
      // Dynamic Validation for Sign Up fields
      this.loginForm.valueChanges.subscribe(() => {
         const isRegistering = this.isSignUp();
         const fullName = this.loginForm.get('fullName');
         const terms = this.loginForm.get('terms');
+        const dataConsent = this.loginForm.get('dataConsent');
         
         if (isRegistering) {
           fullName?.setValidators([Validators.required]);
           terms?.setValidators([Validators.requiredTrue]);
+          dataConsent?.setValidators([Validators.requiredTrue]);
         } else {
           fullName?.clearValidators();
           terms?.clearValidators();
+          dataConsent?.clearValidators();
         }
         fullName?.updateValueAndValidity({ emitEvent: false });
         terms?.updateValueAndValidity({ emitEvent: false });
+        dataConsent?.updateValueAndValidity({ emitEvent: false });
      });
   }
 
@@ -195,8 +220,9 @@ export class LoginComponent {
   async signInWithOAuth(provider: 'google' | 'github' | 'facebook') {
      try {
        await this.authService.signInWithOAuth(provider);
-     } catch (err: any) {
-       alert('OAuth Error: ' + err.message);
+     } catch (err: unknown) {
+       const message = err instanceof Error ? err.message : 'Unknown OAuth error';
+       alert('OAuth Error: ' + message);
      }
   }
 
@@ -225,13 +251,15 @@ export class LoginComponent {
          if (error) throw error;
          
          if (!this.isSignUp()) {
-             // TODO: Check Role Here
-             this.router.navigate(['/map']);
-         }
-
+             // Navigation is handled by AuthService subscription
+             // inside auth.service.ts handleNavigation() method.
+         } 
+         
       } catch (err: unknown) {
         let msg = err instanceof Error ? err.message : 'Authentication Failed';
-        const status = (err as any)?.status;
+        
+        // Safe check for status property on unknown error
+        const status = (err as { status?: number })?.status;
         
         if (status === 429 || msg.includes('429') || msg.toLowerCase().includes('too many requests')) {
            msg = 'SECURITY LOCKOUT: Too many attempts. System cooldown initiated.';

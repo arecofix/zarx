@@ -1,15 +1,10 @@
-import { Injectable, computed, inject, signal } from '@angular/core';
+import { Injectable, computed, inject, signal, effect, Injector } from '@angular/core';
 import { Router } from '@angular/router';
 import { SupabaseService } from './supabase.service';
 import { Session, User, AuthChangeEvent } from '@supabase/supabase-js';
+import { Capacitor } from '@capacitor/core';
 
-export interface Profile {
-  id: string;
-  email?: string;
-  full_name?: string;
-  role?: 'civilian' | 'responder' | 'military' | 'admin';
-  avatar_url?: string;
-}
+import { Profile } from '../models/index';
 
 @Injectable({
   providedIn: 'root'
@@ -17,11 +12,18 @@ export interface Profile {
 export class AuthService {
   private supabase = inject(SupabaseService).client;
   private router = inject(Router);
+  private injector = inject(Injector);
 
   // Signals for Auth State
   currentUser = signal<User | null>(null);
   session = signal<Session | null>(null);
   profile = signal<Profile | null>(null);
+  
+  // Computed Role Check
+  isAdmin = computed(() => this.profile()?.role === 'admin');
+
+  // Initialization State
+  isInitialized = signal(false);
 
   constructor() {
     this.initAuth();
@@ -37,13 +39,30 @@ export class AuthService {
       this.updateState(session);
       this.handleNavigation(event);
     });
+
+    // Mark as initialized
+    this.isInitialized.set(true);
+  }
+
+  // Helper to wait for auth initialization
+  async waitForAuthInit(): Promise<void> {
+    if (this.isInitialized()) return;
+    
+    return new Promise(resolve => {
+       const effectRef = effect(() => {
+          if (this.isInitialized()) {
+             resolve();
+             effectRef.destroy();
+          }
+       }, { injector: this.injector });
+    });
   }
 
   private async updateState(session: Session | null) {
     this.session.set(session);
     this.currentUser.set(session?.user ?? null);
     if (session?.user) {
-      await this.fetchProfile(session.user.id);
+      this.fetchProfile(session.user.id);
     } else {
       this.profile.set(null);
     }
@@ -63,18 +82,18 @@ export class AuthService {
 
   private handleNavigation(event: AuthChangeEvent) {
     if (event === 'SIGNED_IN') {
-      // Small Delay to ensure profile fetch starts? Or check Metadata directly
-      // Better to check metadata first for speed, then profile fallback
-      const user = this.currentUser();
-      const metadata = user?.user_metadata;
-      
-      // Determine Role
-      const role = metadata?.['role'] || 'civilian'; 
+      // Only redirect if we are in an auth flow or root
+      const currentUrl = this.router.url;
+      if (currentUrl === '/' || currentUrl.startsWith('/auth')) {
+          const user = this.currentUser();
+          const metadata = user?.user_metadata;
+          const role = metadata?.['role'] || 'civilian'; 
 
-      if (role === 'responder') {
-        this.router.navigate(['/dashboard/responder']);
-      } else {
-        this.router.navigate(['/map']);
+          if (role === 'responder') {
+            this.router.navigate(['/dashboard/responder']);
+          } else {
+            this.router.navigate(['/inicio']);
+          }
       }
     } else if (event === 'SIGNED_OUT') {
       this.router.navigate(['/auth/login']);
@@ -115,10 +134,22 @@ export class AuthService {
   }
 
   async signInWithOAuth(provider: 'google' | 'github' | 'facebook') {
+    if (this.currentUser()) {
+       this.handleNavigation('SIGNED_IN');
+       return { data: null, error: null };
+    }
+
+    let redirectUrl = `${window.location.origin}/inicio`;
+    
+    // Fix for Capacitor/Android Localhost issue
+    if (Capacitor.isNativePlatform()) {
+      redirectUrl = 'https://zarx-arecofix.web.app/inicio';
+    }
+
     return this.supabase.auth.signInWithOAuth({
       provider,
       options: {
-        redirectTo: window.location.origin,
+        redirectTo: redirectUrl,
       },
     });
   }

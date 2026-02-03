@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.zarx.system',
-  appName: 'ZARX',
+  appName: 'ZARX System',
   webDir: 'dist/zarx-system/browser'
 };
 

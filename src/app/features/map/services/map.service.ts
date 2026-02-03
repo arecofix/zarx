@@ -3,6 +3,8 @@ import { isPlatformBrowser } from '@angular/common';
 import * as L from 'leaflet';
 import { LocationService } from '../../../core/services/location.service';
 
+import { Alert } from '../../../core/models/index';
+
 @Injectable({
   providedIn: 'root'
 })
@@ -17,6 +19,7 @@ export class MapService {
   isLoading = signal<boolean>(true);
   zoomLevel = signal<number>(13);
   userLocation = signal<{ lat: number; lng: number } | null>(null);
+  errorMessage = signal<string | null>(null);
 
   constructor() {
     this.fixLeafletIcons();
@@ -71,23 +74,31 @@ export class MapService {
     if (!this.map) return;
     this.isLoading.set(true);
 
-    // Try to get single position first
-    const pos = await this.locationService.getCurrentPosition();
-    if (pos) {
-      const { latitude, longitude } = pos.coords;
-      this.updateUserLocation(latitude, longitude);
-      this.centerMap(latitude, longitude);
-      this.isLoading.set(false);
+    try {
+      // Try to get single position first (improved LocationService logic inside)
+      const pos = await this.locationService.getCurrentPosition();
       
-      // Start continuous tracking if not already
-      if (!this.locationService.isTracking()) {
-        this.locationService.startTracking();
+      if (pos) {
+        const { latitude, longitude } = pos.coords;
+        this.updateUserLocation(latitude, longitude);
+        this.centerMap(latitude, longitude);
+        
+        // Start continuous tracking if not already
+        if (!this.locationService.isTracking()) {
+          this.locationService.startTracking();
+        }
+      } else {
+         console.warn('Could not acquire location. Using default fallback.');
+         this.errorMessage.set('Could not detect location. Using Default View.');
+         this.centerMap(-34.6037, -58.3816);
       }
-    } else {
-       // Fallback logic handled by LocationService returning null, but we can center default
-       console.info('Using Command Center fallback.');
-       this.centerMap(-34.6037, -58.3816);
-       this.isLoading.set(false);
+    } catch (err) {
+      console.error('locateUser unexpected error:', err);
+      // Fallback on crash
+      this.errorMessage.set('GPS Error. Using Default View.');
+      this.centerMap(-34.6037, -58.3816);
+    } finally {
+      this.isLoading.set(false);
     }
   }
 
@@ -138,9 +149,12 @@ export class MapService {
     const iconRetinaUrl = 'assets/marker-icon-2x.png';
     const iconUrl = 'assets/marker-icon.png';
     const shadowUrl = 'assets/marker-shadow.png';
-    const iconDefault = L.Icon.Default.prototype as any;
     
-    iconDefault._getIconUrl = null; 
+    // Type assertion to bypass readonly property check or strictly typed issues
+    const iconDefault = L.Icon.Default.prototype as { _getIconUrl?: () => string };
+    
+    // @ts-ignore: delete generic is not standard but required for leaflet fix
+    delete iconDefault._getIconUrl; 
     
     L.Icon.Default.mergeOptions({
       iconRetinaUrl,
@@ -149,10 +163,103 @@ export class MapService {
     });
   }
 
+  // --- ALERT MARKERS ---
+  private alertMarkers: Map<string, L.Marker> = new Map();
+
+  addAlertMarker(alert: Alert) { 
+     if (!this.map) return;
+     
+     // Parse Location POINT(lng lat)
+     // Format: "POINT(-58.123 -34.123)"
+     const matches = alert.location.match(/POINT\(([-\d.]+) ([-\d.]+)\)/);
+     if (!matches) return;
+     
+     const lng = parseFloat(matches[1]);
+     const lat = parseFloat(matches[2]);
+
+     // Determine Styling based on Alert Type
+     let colorClass = 'bg-orange-500';
+     let pulseClass = 'bg-orange-600';
+     let ringClass = 'border-white';
+
+     switch (alert.type) {
+        case 'SOS':
+          colorClass = 'bg-red-600';
+          pulseClass = 'bg-red-500';
+          break;
+        case 'FIRE':
+          colorClass = 'bg-orange-600';
+          pulseClass = 'bg-orange-500';
+          break;
+        case 'MEDICAL':
+          // Green/Emerald for medical
+          colorClass = 'bg-emerald-600';
+          pulseClass = 'bg-emerald-500';
+          break;
+        case 'MILITARY_OPS':
+          // Tactical Slate/Dark
+          colorClass = 'bg-slate-700';
+          pulseClass = 'bg-slate-500';
+          break;
+        case 'SUSPICIOUS_ACTIVITY':
+          // Yellow/Amber
+          colorClass = 'bg-yellow-500';
+          pulseClass = 'bg-yellow-400';
+          ringClass = 'border-yellow-200';
+          break;
+     }
+
+     const isCritical = alert.type === 'SOS';
+     
+     const alertIcon = L.divIcon({
+       className: 'alert-marker',
+       html: `
+         <div class="relative flex items-center justify-center w-8 h-8">
+           <span class="absolute inline-flex w-full h-full rounded-full opacity-75 animate-ping ${pulseClass}"></span>
+           <span class="relative inline-flex w-4 h-4 rounded-full ${colorClass} border-2 ${ringClass} shadow-lg"></span>
+         </div>
+       `,
+       iconSize: [32, 32],
+       iconAnchor: [16, 16]
+     });
+
+     const marker = L.marker([lat, lng], { icon: alertIcon }).addTo(this.map!);
+     marker.bindPopup(`
+        <div class="text-slate-900 min-w-[150px]">
+           <div class="flex items-center gap-2 mb-1">
+              <span class="w-2 h-2 rounded-full ${colorClass}"></span>
+              <strong class="text-sm font-bold uppercase">${alert.type.replace('_', ' ')}</strong>
+           </div>
+           <p class="text-xs text-slate-600 m-0 leading-tight">${alert.description || 'Sin descripción'}</p>
+            <p class="text-[10px] text-slate-400 mt-2 border-t pt-1 border-slate-200">
+              ${alert.created_at ? new Date(alert.created_at).toLocaleTimeString() : 'Hora desconocida'} • Priority: ${alert.priority || 'NORMAL'}
+            </p>
+         </div>
+      `);
+
+      if (alert.id) {
+         this.alertMarkers.set(alert.id, marker);
+      }
+     
+     // Fly to critical alerts
+     if (isCritical) {
+         this.map.flyTo([lat, lng], 17, { animate: true });
+     }
+  }
+
+  clearAlertMarkers() {
+    this.alertMarkers.forEach(m => m.remove());
+    this.alertMarkers.clear();
+  }
+
   cleanup() {
     if (this.map) {
       this.map.remove();
       this.map = undefined;
     }
+    this.locationService.stopTracking();
+    this.clearAlertMarkers();
+    this.userLocation.set(null);
+    this.isLoading.set(true);
   }
 }

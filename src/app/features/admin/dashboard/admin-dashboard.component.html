@@ -1,0 +1,164 @@
+<div class="relative w-screen h-screen bg-slate-950 overflow-hidden font-mono flex">
+
+  <!-- LEFT COLUMN: SIDEBAR (Layers & Zones) -->
+  <aside class="w-80 h-full flex-none bg-slate-900/95 backdrop-blur border-r border-slate-700 flex flex-col transition-all duration-300 absolute z-50 md:relative md:translate-x-0"
+         [class.-translate-x-full]="!sidebarOpen()">
+    
+    <div class="p-6 border-b border-slate-800 flex items-center justify-between">
+       <div class="cursor-pointer group" (click)="goToHome()">
+         <h1 class="text-xl font-black text-white tracking-widest group-hover:opacity-80 transition-opacity">ZARX <span class="text-red-500">C4ISR</span></h1>
+         <p class="text-[10px] text-slate-500 uppercase group-hover:text-slate-400">Strategic Command Interface</p>
+       </div>
+       <button (click)="sidebarOpen.set(false)" class="md:hidden text-slate-400 hover:text-white">
+          <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+       </button>
+    </div>
+
+    <div class="p-6 flex-1 overflow-y-auto">
+      <!-- LAYERS -->
+      <div class="mb-8">
+         <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+           <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+           CAPAS TÁCTICAS
+         </h3>
+         
+         <div class="space-y-3">
+           <label class="flex items-center justify-between cursor-pointer group">
+              <span class="text-sm text-slate-300 group-hover:text-white">Heatmap Delictivo</span>
+              <input type="checkbox" [checked]="showHeatmap()" (change)="toggleHeatmap()" class="accent-red-500">
+           </label>
+           <label class="flex items-center justify-between cursor-pointer group">
+              <span class="text-sm text-slate-300 group-hover:text-white">Zonas Registradas</span>
+              <input type="checkbox" [checked]="showZones()" (change)="toggleZones()" class="accent-emerald-500">
+           </label>
+           <label class="flex items-center justify-between cursor-pointer group">
+              <span class="text-sm text-slate-300 group-hover:text-white">Patrullas (GPS)</span>
+              <input type="checkbox" disabled class="accent-blue-500 opacity-50 cursor-not-allowed">
+           </label>
+         </div>
+      </div>
+      
+      <!-- INFO PANEL -->
+      <div class="mb-8">
+         <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">ESTADO DE ZONA</h3>
+         <div class="p-4 bg-black/40 border border-slate-700 rounded-sm">
+            <div class="flex justify-between mb-2">
+               <span class="text-xs text-slate-400">Riesgo Promedio</span>
+               <span class="text-xs font-bold text-red-500">ALTO (78%)</span>
+            </div>
+            <div class="w-full bg-slate-800 h-1 rounded-full overflow-hidden">
+               <div class="bg-red-600 h-full w-[78%]"></div>
+            </div>
+         </div>
+      </div>
+      
+      <!-- ZONES LIST -->
+      <div>
+        <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">ZONAS ACTIVAS</h3>
+        @for (zone of zones(); track zone.id) {
+           <div class="flex items-center justify-between py-2 border-b border-white/5 last:border-0">
+              <span class="text-xs text-slate-300 truncate max-w-[140px]">{{ zone.name }}</span>
+              <span class="text-[10px] px-1.5 py-0.5 rounded border" 
+                 [ngClass]="{
+                   'border-emerald-500 text-emerald-500': zone.type === 'SAFE',
+                   'border-red-500 text-red-500': zone.type === 'DANGER',
+                   'border-slate-500 text-slate-500': zone.type === 'BLOCKED',
+                   'border-blue-500 text-blue-500': zone.type === 'COMMERCIAL'
+                 }">
+                 {{ zone.type }}
+              </span>
+           </div>
+        } @empty {
+           <p class="text-[10px] text-slate-600 italic">Sin zonas definidas...</p>
+        }
+      </div>
+
+    </div>
+
+    <div class="p-4 border-t border-slate-800 bg-black/20 text-center">
+       <button class="text-[10px] text-slate-500 hover:text-white uppercase tracking-widest">Descargar Reporte Geospacial</button>
+    </div>
+  </aside>
+
+  <!-- CENTER COLUMN: MAP -->
+  <main class="flex-1 relative bg-slate-950 flex flex-col min-w-0">
+     
+     <!-- Map Element -->
+     <div #mapContainer class="flex-1 w-full h-full z-0"></div>
+
+     <!-- TOGGLE BUTTON: LEFT SIDEBAR (Mobile) -->
+     @if (!sidebarOpen()) {
+        <button (click)="sidebarOpen.set(true)" class="absolute top-4 left-4 z-20 bg-slate-900/90 backdrop-blur border border-slate-700 p-2 text-white hover:bg-slate-800 rounded shadow-lg">
+           <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+     }
+
+     <!-- TOGGLE BUTTON: RIGHT SIDEBAR (Feed) - Visible when feed is closed -->
+     @if (!feedOpen()) {
+        <button (click)="feedOpen.set(true)" class="absolute top-4 right-4 z-20 bg-slate-900/90 backdrop-blur border border-slate-700 p-2 text-white hover:bg-slate-800 rounded shadow-lg flex items-center gap-2">
+           <span class="relative flex h-2 w-2">
+             <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+             <span class="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+           </span>
+           <span class="text-xs font-bold hidden sm:inline">ALERTS</span>
+           <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+        </button>
+     }
+     
+     <!-- MODAL: NEW ZONE -->
+     @if (showZoneModal()) {
+        <div class="absolute inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" style="z-index: 1000;">
+           <div class="bg-slate-900 border border-slate-600 w-full max-w-sm p-6 shadow-2xl relative">
+              <h2 class="text-white font-bold text-lg mb-4 flex items-center gap-2">
+                 <svg class="w-5 h-5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+                 DEFINIR NUEVA ZONA
+              </h2>
+              
+              <div class="space-y-4">
+                 <div>
+                    <label class="block text-xs uppercase text-slate-500 mb-1">Nombre de Operación / Zona</label>
+                    <input [(ngModel)]="newZoneData.name" class="w-full bg-slate-950 border border-slate-700 text-white px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none">
+                 </div>
+                 <div>
+                    <label class="block text-xs uppercase text-slate-500 mb-1">Nivel de Riesgo (0-100)</label>
+                    <input type="range" [(ngModel)]="newZoneData.risk_level" min="0" max="100" class="w-full accent-emerald-500 h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer">
+                    <div class="text-right text-xs font-mono text-emerald-500">{{ newZoneData.risk_level }}%</div>
+                 </div>
+                 <div>
+                    <label class="block text-xs uppercase text-slate-500 mb-1">Clasificación</label>
+                    <div class="grid grid-cols-2 gap-2">
+                       <button (click)="newZoneData.type = 'SAFE'" [class.bg-emerald-600]="newZoneData.type === 'SAFE'" class="border border-slate-700 py-2 text-xs text-slate-300 hover:text-white transition-colors">SAFE</button>
+                       <button (click)="newZoneData.type = 'DANGER'" [class.bg-red-600]="newZoneData.type === 'DANGER'" class="border border-slate-700 py-2 text-xs text-slate-300 hover:text-white transition-colors">DANGER</button>
+                       <button (click)="newZoneData.type = 'BLOCKED'" [class.bg-slate-600]="newZoneData.type === 'BLOCKED'" class="border border-slate-700 py-2 text-xs text-slate-300 hover:text-white transition-colors">BLOCKED</button>
+                       <button (click)="newZoneData.type = 'COMMERCIAL'" [class.bg-blue-600]="newZoneData.type === 'COMMERCIAL'" class="border border-slate-700 py-2 text-xs text-slate-300 hover:text-white transition-colors">COMM</button>
+                    </div>
+                 </div>
+              </div>
+
+              <div class="flex gap-3 mt-8">
+                 <button (click)="cancelZone()" class="flex-1 py-3 text-xs font-bold text-slate-400 hover:text-white border border-transparent hover:border-slate-600">CANCELAR</button>
+                 <button (click)="saveZone()" class="flex-1 py-3 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold">CONFIRMAR</button>
+              </div>
+           </div>
+        </div>
+     }
+  </main>
+
+  <!-- RIGHT COLUMN: LIVE FEED -->
+  <aside class="w-80 flex-none bg-slate-900/90 border-l border-slate-700 backdrop-blur-md transition-transform duration-300 flex flex-col fixed md:relative right-0 h-full z-40"
+         [class.translate-x-full]="!feedOpen()"
+         [class.translate-x-0]="feedOpen()">
+    
+    <!-- Close Button (Mobile primarily, or desktop toggle) -->
+    <button (click)="feedOpen.set(false)" class="absolute top-4 right-4 z-50 text-slate-400 hover:text-white md:hidden">
+       <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+    </button>
+
+    <app-incoming-feed 
+       (locateAlert)="onLocateAlert($event)" 
+       class="flex-1 overflow-hidden"
+    ></app-incoming-feed>
+
+  </aside>
+
+</div>
