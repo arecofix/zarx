@@ -29,3 +29,16 @@ interface BeforeInstallPromptEvent extends Event {
 interface Window {
   onbeforeinstallprompt: ((this: Window, ev: BeforeInstallPromptEvent) => any) | null;
 }
+
+// Leaflet global declarations
+declare module 'leaflet' {
+  export = L;
+}
+
+declare module 'leaflet.heat' {
+  import * as L from 'leaflet';
+  
+  namespace L {
+    function heatLayer(latlngs: any[], options?: any): any;
+  }
+}

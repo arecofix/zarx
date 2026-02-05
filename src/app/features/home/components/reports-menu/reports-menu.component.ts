@@ -32,7 +32,7 @@ import { REPORT_GROUPS } from '../../../../core/config/report.config';
               }
             }
           </h3>
-          <button (click)="close()" class="p-2 text-slate-400 hover:text-white bg-slate-800/50 rounded-full">
+          <button type="button" (click)="close()" class="p-2 text-slate-400 hover:text-white bg-slate-800/50 rounded-full z-50">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
           </button>
         </div>
@@ -50,7 +50,7 @@ import { REPORT_GROUPS } from '../../../../core/config/report.config';
                 <div class="text-white font-black text-lg tracking-tight">SEGURIDAD</div>
                 <div class="text-red-300/60 text-xs font-medium uppercase tracking-wider">Prioridad Alta</div>
               </div>
-              <div class="ml-auto text-slate-500 group-hover:translate-x-1 transition-transform">
+              <div class="ml-auto text-slate-300 group-hover:translate-x-1 transition-transform">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
               </div>
             </button>
@@ -64,7 +64,7 @@ import { REPORT_GROUPS } from '../../../../core/config/report.config';
                 <div class="text-white font-black text-lg tracking-tight">ZONA / SERVICIOS</div>
                 <div class="text-blue-300/60 text-xs font-medium uppercase tracking-wider">Prioridad Media</div>
               </div>
-              <div class="ml-auto text-slate-500 group-hover:translate-x-1 transition-transform">
+              <div class="ml-auto text-slate-300 group-hover:translate-x-1 transition-transform">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
               </div>
             </button>
@@ -79,7 +79,7 @@ import { REPORT_GROUPS } from '../../../../core/config/report.config';
                    </div>
                    <div class="text-left flex-1">
                      <div class="text-slate-200 font-bold">{{ item.label }}</div>
-                     <div class="text-slate-500 text-xs">{{ item.description }}</div>
+                     <div class="text-slate-300 text-xs">{{ item.description }}</div>
                    </div>
                    <div class="ml-auto text-slate-600">
                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
@@ -118,9 +118,7 @@ export class ReportsMenuComponent {
   }
 
   close() {
-    if (!this.isLoading) {
-       this.closeMenu.emit();
-    }
+    this.closeMenu.emit();
   }
 
   selectStrict(type: ReportType) {

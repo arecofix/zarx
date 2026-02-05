@@ -10,7 +10,7 @@ import { OnboardingStep } from '../../models/home.models';
     <div class="fixed inset-0 z-50 bg-slate-950/95 flex flex-col items-center justify-center p-8 backdrop-blur-sm animate-fade-in">
       
       <!-- Skip -->
-      <button (click)="finish()" class="absolute top-8 right-8 text-slate-500 text-xs font-mono hover:text-white uppercase">
+      <button (click)="finish()" class="absolute top-8 right-8 text-slate-300 text-xs font-mono hover:text-white uppercase">
         Saltar Intro ->
       </button>
 

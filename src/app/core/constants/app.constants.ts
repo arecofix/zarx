@@ -33,10 +33,11 @@ export const AppConstants = {
   ASSETS: {
     AUDIO: {
       SIREN: 'assets/sounds/siren.mp3',
+      URGENT_SIREN: 'assets/sounds/emergency_urgent.mp3',
       ALERT_BEEP: 'assets/sounds/beep.alert.mp3'
     },
     IMAGES: {
-      AVATAR_PLACEHOLDER: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
+      AVATAR_PLACEHOLDER: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjOTQxYjgyIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBhdGggZD0iTTIwIDIxdi0yYTQgNCAwIDAgMC00LTRIOGE0IDQgMCAwIDAtNCA0djIiPjwvcGF0aD48Y2lyY2xlIGN4PSIxMiIgY3k9IjciIHI9IjQiPjwvY2lyY2xlPjwvc3ZnPg==',
       MARKER: 'assets/img/marker-icon.png'
     }
   }

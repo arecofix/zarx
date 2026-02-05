@@ -1,8 +1,8 @@
-import { Component, OnDestroy, OnInit, afterNextRender, effect, inject } from '@angular/core';
+import { Component, OnDestroy, OnInit, afterNextRender, effect, inject, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { MapService } from '../../map/services/map.service';
-import { AlertService } from '../../../core/services/alert.service';
+import { DashboardService } from '../services/dashboard.service';
 
 @Component({
   selector: 'app-monitoring',
@@ -26,7 +26,7 @@ import { AlertService } from '../../../core/services/alert.service';
                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
                    <span class="relative inline-flex rounded-full h-3 w-3 bg-red-600"></span>
                  </span>
-                 <span class="font-mono text-xs text-red-500 font-bold">EN VIVO: {{ alertService.activeAlerts().length }} ALERTAS ACTIVAS</span>
+                 <span class="font-mono text-xs text-red-500 font-bold">EN VIVO: {{ activeReports().length }} ALERTAS ACTIVAS</span>
                </div>
             </div>
 
@@ -39,7 +39,7 @@ import { AlertService } from '../../../core/services/alert.service';
          <div class="flex justify-between items-end pointer-events-auto">
             <div class="w-1/3 max-h-48 overflow-y-auto bg-black/80 border border-slate-800 rounded p-4 font-mono text-[10px] text-slate-400">
                <h3 class="text-slate-200 mb-2 border-b border-slate-700 pb-1">LOG DE EVENTOS</h3>
-               @for(alert of alertService.activeAlerts(); track alert.id) {
+               @for(alert of activeReports(); track alert.id) {
                  <div class="mb-2 p-2 bg-slate-900/50 rounded border-l-2 border-red-500">
                     <div class="text-red-400 font-bold">{{alert.type}}</div>
                     <div>{{alert.description}}</div>
@@ -56,8 +56,15 @@ import { AlertService } from '../../../core/services/alert.service';
 })
 export class MonitoringComponent implements OnInit, OnDestroy {
   mapService = inject(MapService);
-  alertService = inject(AlertService);
+  dashboardService = inject(DashboardService);
   router = inject(Router);
+
+  // Filter for active reports (Pending or Validated)
+  activeReports = computed(() => {
+    return this.dashboardService.incomingAlerts().filter(a => 
+       a.status === 'PENDING' || a.status === 'VALIDATED' || a.status === 'OPEN' || a.status === 'ENGAGED'
+    );
+  });
 
   constructor() {
     afterNextRender(() => {
@@ -65,20 +72,22 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       this.mapService.initMap('admin-map');
     });
 
-    // Reactive: Add markers when activeAlerts change
+    // Reactive: Add markers when activeReports change
     effect(() => {
-       const alerts = this.alertService.activeAlerts();
+       const alerts = this.activeReports();
        this.mapService.clearAlertMarkers();
        alerts.forEach(alert => this.mapService.addAlertMarker(alert));
     });
   }
 
   ngOnInit() {
-    this.alertService.startMonitoring();
+    // Ensure we have data
+    this.dashboardService.getAlerts();
+    this.dashboardService.subscribeToAlerts();
   }
 
   ngOnDestroy() {
-    this.alertService.stopMonitoring();
+    this.dashboardService.unsubscribe();
     this.mapService.cleanup();
   }
 

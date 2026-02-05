@@ -1,6 +1,6 @@
 import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { AlertService } from '../../core/services/alert.service';
+import { ReportService } from '../../core/services/report.service';
 import { Haptics, ImpactStyle, NotificationType } from '@capacitor/haptics';
 import { ReportType } from '../../core/models';
 
@@ -9,7 +9,7 @@ import { ReportType } from '../../core/models';
   standalone: true,
   imports: [CommonModule],
   template: `
-    <div class="fixed bottom-8 left-0 right-0 flex justify-center z-50 px-4 pointer-events-none">
+    <div class="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 px-4 pointer-events-none">
       <button 
         (touchstart)="startPress()" 
         (touchend)="endPress()" 
@@ -87,7 +87,7 @@ import { ReportType } from '../../core/models';
   `]
 })
 export class SosButtonComponent {
-  alertService = inject(AlertService);
+  reportService = inject(ReportService);
   
   isPressed = signal(false);
   isActive = signal(false);
@@ -138,7 +138,7 @@ export class SosButtonComponent {
     await Haptics.notification({ type: NotificationType.Warning });
     
     try {
-      await this.alertService.sendAlert(ReportType.SOS);
+      await this.reportService.createReport(ReportType.SOS, 'SOS Button Manual Trigger');
       
       // The Service handles Haptic success, but we can double down or just rely on UI
       this.alertSent.set(true);

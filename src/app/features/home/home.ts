@@ -1,4 +1,4 @@
-import { Component, OnInit, signal, Inject, PLATFORM_ID, inject, ViewChild } from '@angular/core';
+import { Component, OnInit, signal, Inject, PLATFORM_ID, inject, ViewChild, Injector, effect } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common'; 
 import { Router } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
@@ -6,6 +6,7 @@ import { MapComponent } from './components/map/map.component';
 import { NewsTickerComponent } from './components/news-ticker/news-ticker.component';
 import { BottomSheetComponent } from './components/bottom-sheet/bottom-sheet.component';
 import { OnboardingOverlayComponent } from './components/onboarding-overlay/onboarding-overlay.component';
+import { OnboardingComponent } from '../auth/components/onboarding/onboarding.component';
 import { ReportsMenuComponent } from './components/reports-menu/reports-menu.component';
 import { ToastNotificationComponent } from '../../shared/components/toast-notification/toast-notification.component';
 import { NewsItem } from './models/home.models';
@@ -20,6 +21,11 @@ import { ReportService } from '../../core/services/report.service';
 import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
 import { FormsModule } from '@angular/forms';
 import { PwaService } from '../../core/services/pwa.service';
+import { NotificationService } from '../../core/services/notification.service';
+import { PanicButtonComponent } from '../../shared/components/panic-button/panic-button.component';
+import { NewsService } from '../../core/services/news.service';
+import { NearbyAlertNotificationComponent } from './components/nearby-alert-notification/nearby-alert-notification.component';
+import { SosService } from '../../core/services/sos.service';
 
 @Component({
   selector: 'app-home',
@@ -31,9 +37,11 @@ import { PwaService } from '../../core/services/pwa.service';
     BottomSheetComponent, 
     OnboardingOverlayComponent,
     ReportsMenuComponent,
-    ReportsMenuComponent,
     ToastNotificationComponent,
-    FormsModule
+    PanicButtonComponent,
+    OnboardingComponent,
+    FormsModule,
+    NearbyAlertNotificationComponent
   ],
   template: `
     <div class="relative w-screen h-screen overflow-hidden bg-slate-950 font-sans select-none">
@@ -44,63 +52,146 @@ import { PwaService } from '../../core/services/pwa.service';
       <!-- ONBOARDING OVERLAY (Z-50) -->
       @if (showOnboarding()) {
         <app-onboarding-overlay (complete)="onOnboardingComplete()"></app-onboarding-overlay>
+      } @else if (showIdentityOnboarding()) {
+        <app-onboarding></app-onboarding>
       }
+
+      <!-- LAYER 1.5: NEARBY ALERTS (Z-60) -->
+       @if (!showOnboarding()) {
+          <app-nearby-alert-notification></app-nearby-alert-notification>
+       }
 
       <!-- LAYER 1: HUD TICKER (Z-10) -->
       @if (!showOnboarding()) {
-         <app-news-ticker [news]="newsItems" (newsClicked)="onNewsClick($event)"></app-news-ticker>
+         <app-news-ticker [news]="newsItems()" (newsClicked)="onNewsClick($event)"></app-news-ticker>
       }
 
       <!-- LAYER 2: CONTROLS (Z-20) -->
       @if (!showOnboarding()) {
 
-        <!-- PWA INSTALL BUTTON (Top Center/Left) -->
-        @if (pwaService.isInstallable()) {
-           <div class="fixed top-16 left-4 z-50 animate-bounce">
-              <button 
-                (click)="pwaService.installApp()"
-                class="bg-blue-600/90 backdrop-blur hover:bg-blue-500 text-white font-black text-xs py-3 px-5 rounded-full shadow-[0_0_20px_rgba(37,99,235,0.6)] flex items-center gap-2 border border-blue-400/50 uppercase tracking-widest transition-all active:scale-95"
-              >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                  <span>Instalar App</span>
-              </button>
-           </div>
-        }
-        
-        <!-- Profile Badge & Menu (Top Right) -->
-        <div class="fixed top-14 right-4 z-40 flex flex-col items-end">
-          
-          <div 
-             (click)="toggleProfileMenu()"
-             class="flex items-center gap-3 bg-slate-900/90 backdrop-blur rounded-full pl-4 pr-1 py-1 border border-white/10 shadow-lg animate-slide-in-right cursor-pointer hover:bg-slate-800 transition-colors select-none"
-          >
-             <div class="text-right">
-               <div class="text-[10px] font-mono text-emerald-400 font-bold">{{ UI.HOME.SCORE }}: {{ userScore() }}</div>
-               <div class="text-[9px] text-slate-400 uppercase tracking-widest">{{ userRole() }}</div>
-             </div>
-             <div class="w-10 h-10 rounded-full bg-slate-800 border-2 border-emerald-500 overflow-hidden relative">
-               <img [src]="userAvatar()" alt="User" class="w-full h-full object-cover opacity-80" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAyNCAyNCcgZmlsbD0ibm9uZScgc3Ryb2tlPSdjdXJyZW50Q29sb3InIHN0cm9rZS13aWR0aD0nMicgc3Ryb2tlLWxpbmVjYXA9J3JvdW5kJyBzdHJva2UtbGluZWpvaW49J3JvdW5kJyBjbGFzcz0idGV4dC1zbGF0ZS01MDAiPjxjaXJjbGUgY3g9IjEyIiBjeT0iNyIgcj0iNCIgLz48cGF0aCBkPSJNMjAgMjF2LTIwLTYiIC8+PC9zdmc+'" />
-             </div>
-          </div>
-
-          <!-- Dropdown Menu -->
-          @if (showProfileMenu()) {
-            <div class="mt-2 w-48 bg-slate-900/95 backdrop-blur border border-slate-700 rounded-sm shadow-xl overflow-hidden animate-fade-in-down">
-               <button (click)="navigateTo('/profile')" class="w-full text-left px-4 py-3 text-xs text-slate-300 hover:bg-slate-800 hover:text-white border-b border-slate-800 flex items-center gap-2">
-                 <span>👤</span> {{ UI.PROFILE.TITLE }}
-               </button>
-               <button (click)="navigateTo('/settings')" class="w-full text-left px-4 py-3 text-xs text-slate-300 hover:bg-slate-800 hover:text-white border-b border-slate-800 flex items-center gap-2">
-                 <span>⚙️</span> {{ UI.PROFILE.SETTINGS }}
-               </button>
-               <button (click)="logout()" class="w-full text-left px-4 py-3 text-xs text-red-400 hover:bg-red-900/20 hover:text-red-300 flex items-center gap-2">
-                 <span>🚪</span> {{ UI.PROFILE.LOGOUT }}
+         <!-- PWA INSTALL BUTTON (Top Center-Left adjusted) -->
+         @if (pwaService.isInstallable()) {
+            <div class="fixed top-20 left-1/2 -translate-x-1/2 z-40 animate-bounce pointer-events-auto">
+               <button 
+                 (click)="pwaService.installApp()"
+                 class="bg-blue-600/90 backdrop-blur hover:bg-blue-500 text-white font-black text-xs py-2 px-4 rounded-full shadow-[0_0_20px_rgba(37,99,235,0.6)] flex items-center gap-2 border border-blue-400/50 uppercase tracking-widest transition-all active:scale-95"
+               >
+                   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                   <span>Instalar App</span>
                </button>
             </div>
-          }
-        </div>
+         }
+        
+         <!-- TOP RIGHT CONTROL GROUP (Profile, Notifs, Score) -->
+         <div class="fixed top-14 right-4 z-50 flex flex-col items-end gap-3 pointer-events-none">
+           
+           <!-- Combined Interactive Container -->
+           <div class="flex items-center gap-2 pointer-events-auto">
+             
+              <!-- Unified Profile & Notification Pill -->
+              <div class="relative flex items-center bg-slate-900/90 backdrop-blur rounded-full p-1 border border-white/10 shadow-lg select-none">
+                  
+                  <!-- Notification Bell (Inside Pill) -->
+                  <div class="relative mr-2">
+                     <button (click)="toggleNotifications()" class="w-8 h-8 rounded-full hover:bg-slate-800 text-slate-300 flex items-center justify-center transition-colors active:scale-95">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+                     </button>
+                     @if (notificationService.unreadCount() > 0) {
+                       <span class="absolute top-0 right-0 flex h-3 w-3 items-center justify-center rounded-full bg-red-600 text-[8px] font-bold text-white shadow-sm ring-1 ring-slate-900 animate-pulse">
+                         {{ notificationService.unreadCount() }}
+                       </span>
+                     }
+                  </div>
 
-        <!-- FAB CONTROLS (Map Tools) -->
-        <div class="fixed right-4 top-36 z-40 flex flex-col gap-3 animate-slide-in-right">
+                  <!-- Divider -->
+                  <div class="w-px h-6 bg-slate-700 mx-1"></div>
+
+                  <!-- Profile Section -->
+                  <div (click)="toggleProfileMenu()" class="flex items-center gap-3 pl-2 cursor-pointer hover:bg-slate-800/50 rounded-r-full overflow-hidden p-1 transition-colors">
+                      <!-- Just the Avatar/Profile Text -->
+                      <div class="text-right hidden sm:block"> 
+                        <div class="text-xs font-bold text-white">{{ userName() }}</div>
+                        <div class="text-[9px] text-slate-400 font-bold uppercase">{{ userRole() }}</div>
+                      </div>
+
+                      <div class="w-8 h-8 rounded-full bg-slate-800 border-2 border-emerald-600 overflow-hidden relative flex items-center justify-center">
+                        @if (!imgLoadError()) {
+                           <img [src]="userAvatar()" alt="User" class="w-full h-full object-cover" (error)="onAvatarError()" />
+                        } @else {
+                           <!-- Fallback Avatar SVG -->
+                           <svg xmlns="http://www.w3.org/2000/svg" class="w-full h-full text-slate-400 bg-slate-800 p-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                              <circle cx="12" cy="7" r="4"></circle>
+                           </svg>
+                        }
+                      </div>
+                  </div>
+
+                  <!-- Notifications Dropdown -->
+                  @if (showNotifications()) {
+                     <div class="absolute top-14 right-0 w-80 max-h-80 overflow-y-auto bg-slate-900/95 backdrop-blur-xl border border-slate-700 rounded-xl shadow-2xl animate-fade-in-down origin-top-right flex flex-col z-50">
+                        <div class="p-3 border-b border-slate-800 flex justify-between items-center bg-slate-950/80 sticky top-0 backdrop-blur z-20">
+                           <h4 class="text-xs font-bold text-slate-400 uppercase tracking-widest">Notificaciones</h4>
+                           @if (notificationService.unreadCount() > 0) {
+                             <button (click)="notificationService.markAllAsRead()" class="text-[10px] text-emerald-400 hover:text-emerald-300">Marcar leídas</button>
+                           }
+                        </div>
+                        @for (notif of notificationService.notifications(); track notif.id) {
+                           <div 
+                              (click)="notificationService.markAsRead(notif.id)"
+                              class="p-4 border-b border-slate-800 hover:bg-slate-800/50 transition-colors cursor-pointer relative group"
+                              [class.bg-slate-800_30]="!notif.is_read"
+                           >
+                              @if (!notif.is_read) {
+                                 <div class="absolute left-0 top-0 bottom-0 w-1 bg-emerald-500"></div>
+                              }
+                              <div class="flex items-start gap-3">
+                                 <div class="mt-1">
+                                    @if (notif.type === 'success') { <span class="text-emerald-500">✅</span> }
+                                    @else if (notif.type === 'warning') { <span class="text-amber-500">⚠️</span> }
+                                    @else if (notif.type === 'error') { <span class="text-red-500">🚫</span> }
+                                    @else { <span class="text-blue-500">ℹ️</span> }
+                                 </div>
+                                 <div class="flex-1">
+                                    <h5 class="text-sm font-bold text-slate-200 leading-tight mb-1">{{ notif.title }}</h5>
+                                    <p class="text-xs text-slate-300 leading-relaxed font-medium bg-slate-800/50 p-2 rounded-lg border border-slate-700/50">
+                                      "{{ notif.message }}"
+                                    </p>
+                                    <span class="text-[9px] text-slate-300 mt-2 flex items-center gap-1">
+                                      <span>🕒</span> {{ notif.created_at | date:'short' }}
+                                    </span>
+                                 </div>
+                              </div>
+                           </div>
+                        } @empty {
+                           <div class="p-8 text-center text-slate-300 text-xs">
+                              Sin notificaciones recientes
+                           </div>
+                        }
+                     </div>
+                  }
+
+                  <!-- Profile Menu Dropdown -->
+                  @if (showProfileMenu()) {
+                    <div class="absolute top-14 right-0 w-48 bg-slate-900/95 backdrop-blur-xl border border-slate-700 rounded-xl shadow-2xl overflow-hidden animate-fade-in-down z-50">
+                       <button (click)="navigateTo('/profile')" class="w-full text-left px-4 py-3 text-xs text-slate-300 hover:bg-slate-800 hover:text-white border-b border-slate-800 flex items-center gap-2">
+                         <span>👤</span> {{ UI.PROFILE.TITLE }}
+                       </button>
+                       <button (click)="navigateTo('/settings')" class="w-full text-left px-4 py-3 text-xs text-slate-300 hover:bg-slate-800 hover:text-white border-b border-slate-800 flex items-center gap-2">
+                         <span>⚙️</span> {{ UI.PROFILE.SETTINGS }}
+                       </button>
+                       <button (click)="logout()" class="w-full text-left px-4 py-3 text-xs text-red-400 hover:bg-red-900/20 hover:text-red-300 flex items-center gap-2">
+                         <span>🚪</span> {{ UI.PROFILE.LOGOUT }}
+                       </button>
+                    </div>
+                  }
+
+              </div>
+           </div>
+         </div>
+
+         <!-- FAB CONTROLS (Map Tools) -->
+         <div class="fixed right-4 top-32 z-30 flex flex-col gap-3 animate-slide-in-right pointer-events-auto">
             
             <!-- Recenter -->
             <button (click)="recenterMap()" class="w-10 h-10 rounded-full bg-slate-800/90 border border-slate-600 text-slate-300 flex items-center justify-center shadow-lg hover:bg-emerald-600 hover:text-white hover:border-emerald-500 transition-all active:scale-95" title="Recentrar Mapa">
@@ -114,7 +205,7 @@ import { PwaService } from '../../core/services/pwa.service';
 
         </div>
         
-        <!-- REPORT FAB (Left Side ) -->
+        <!-- REPORT FAB -->
          <div class="fixed left-4 bottom-32 z-20 animate-slide-in-left">
            <button 
              (click)="showReportMenu.set(true)" 
@@ -126,7 +217,7 @@ import { PwaService } from '../../core/services/pwa.service';
            <span class="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[10px] font-bold text-slate-400 bg-black/50 px-2 rounded-full whitespace-nowrap">REPORTAR</span>
          </div>
 
-        <!-- Quick Access Emergency Buttons (Right Sidebar) -->
+        <!-- Quick Access Emergency Buttons -->
         <div class="fixed right-4 bottom-32 z-20 flex flex-col gap-3 items-center animate-slide-in-right">
            
            <!-- Police -->
@@ -145,44 +236,15 @@ import { PwaService } from '../../core/services/pwa.service';
            </button>
 
         </div>
-
-        <!-- SOS Button (Bottom Center) -->
-        <button 
-           (click)="onSosClick()"
-           (pointerdown)="startSosPress()" 
-           (pointerup)="endSosPress()" 
-           (pointerleave)="endSosPress()"
-           class="fixed bottom-24 left-1/2 -translate-x-1/2 z-20 w-24 h-24 rounded-full flex items-center justify-center border-4 border-slate-900 shadow-[0_0_30px_rgba(0,0,0,0.5)] group active:scale-95 overflow-hidden transition-all"
-           [class.bg-emerald-600]="!isSosPressed()"
-           [class.bg-red-600]="isSosPressed()"
-        >
-           <!-- Radial Progress Background -->
-           <div class="absolute inset-0 bg-red-600 origin-bottom transform transition-transform duration-1000 ease-linear"
-                [class.scale-y-0]="!isSosPressed()"
-                [class.scale-y-100]="isSosPressed()">
-           </div>
-
-           <span class="relative z-10 font-black text-white text-xl tracking-tighter group-hover:animate-pulse">
-             {{ isSosPressed() ? 'HOLD...' : UI.HOME.SOS_LABEL }}
-           </span>
-           
-           <!-- Ring progress visual -->
-           <svg class="absolute inset-0 w-full h-full -rotate-90 pointer-events-none p-1">
-             <circle cx="50%" cy="50%" r="42" fill="none" stroke="currentColor" stroke-width="4" class="text-white/20" />
-             <circle cx="50%" cy="50%" r="42" fill="none" stroke="white" stroke-width="4" 
-                     class="opacity-0 transition-opacity duration-300"
-                     [class.opacity-100]="isSosPressed()"
-                     [style.stroke-dasharray]="264"
-                     [style.stroke-dashoffset]="isSosPressed() ? 0 : 264"
-                     class="transition-all duration-1000 ease-linear" />
-           </svg>
-        </button>
-
       }
 
       <!-- LAYER 3: BOTTOM SHEET (Z-30) -->
       @if (!showOnboarding()) {
-         <app-bottom-sheet class="z-30"></app-bottom-sheet>
+         <app-bottom-sheet 
+           [news]="newsItems()" 
+           (validateReport)="handleNeighborValidation($event)" 
+           class="z-30">
+         </app-bottom-sheet>
       }
       
       @if (showReportMenu()) {
@@ -204,8 +266,10 @@ import { PwaService } from '../../core/services/pwa.service';
 
               <!-- Description -->
               <div class="mb-4">
-                <label class="text-slate-400 text-xs uppercase tracking-wider font-bold">Descripción (Opcional)</label>
+                <label for="reportDescription" class="text-slate-400 text-xs uppercase tracking-wider font-bold">Descripción (Opcional)</label>
                 <textarea 
+                  id="reportDescription"
+                  name="reportDescription"
                   [ngModel]="reportDescription()"
                   (ngModelChange)="reportDescription.set($event)"
                   class="w-full mt-2 bg-slate-800 text-white rounded-lg p-3 border border-slate-700 focus:border-emerald-500 outline-none resize-none h-24 text-sm"
@@ -260,6 +324,11 @@ import { PwaService } from '../../core/services/pwa.service';
          <app-map #mapComponent class="absolute inset-0 z-0"></app-map>
       }
 
+      <!-- PANIC BUTTON (Floating) -->
+      @if (!showOnboarding() && !showReportMenu() && !selectedReportType()) {
+         <app-panic-button></app-panic-button>
+      }
+
     </div>
   `,
   styles: [`
@@ -282,7 +351,10 @@ export class HomeComponent implements OnInit {
   private toastService = inject(ToastService);
   private sanitizer = inject(DomSanitizer);
   private router = inject(Router);
-  public pwaService = inject(PwaService); // Public for template access
+  public pwaService = inject(PwaService);
+  public notificationService = inject(NotificationService);
+  private newsService = inject(NewsService);
+  private injector = inject(Injector);
 
   @ViewChild('mapComponent') mapComponent!: MapComponent;
 
@@ -291,7 +363,9 @@ export class HomeComponent implements OnInit {
 
   showOnboarding = signal(true);
   showProfileMenu = signal(false);
+  showNotifications = signal(false);
   showReportMenu = signal(false);
+  showIdentityOnboarding = signal(false);
   
   // Report Wizard Signals
   selectedReportType = signal<ReportType | null>(null);
@@ -306,16 +380,18 @@ export class HomeComponent implements OnInit {
      return REPORT_STRATEGIES[type]?.requiresPhoto ?? false;
   }
   
-  // Dummy Data
+  // Dummy Data - Now populated by NewsService
   userScore = signal(850);
   userRole = signal('CIUDADANO');
+  userName = signal('Agente'); // Added for display
   userAvatar = signal(AppConstants.ASSETS.IMAGES.AVATAR_PLACEHOLDER);
+  imgLoadError = signal(false);
+  
+  onAvatarError() {
+    this.imgLoadError.set(true);
+  }
 
-  newsItems: NewsItem[] = [
-    { id: '1', text: 'ALERTA: Incendio en Barrio La Paz', type: 'urgent', timestamp: new Date() },
-    { id: '2', text: 'CONCEJAL ZARX: Nuevas cámaras instaladas en Zona Sur', type: 'info', timestamp: new Date() },
-    { id: '3', text: 'TRÁFICO: Accidente en Ruta 40, km 50', type: 'urgent', timestamp: new Date() }
-  ];
+  newsItems = signal<NewsItem[]>([]);
 
   // SOS Logic (Hold to Panic)
   isSosPressed = signal(false);
@@ -323,7 +399,7 @@ export class HomeComponent implements OnInit {
   private longPressTriggered = false;
 
   constructor(@Inject(PLATFORM_ID) private platformId: Object) {}
-
+  
   ngOnInit() {
     if (isPlatformBrowser(this.platformId)) {
       const hasSeen = localStorage.getItem('hasSeenOnboarding');
@@ -331,14 +407,68 @@ export class HomeComponent implements OnInit {
         this.showOnboarding.set(false);
       }
       
-      const profile = this.authService.profile();
-      if (profile) {
-        // Here we could update user data
-      }
+      // Reactive Profile Updates
+      effect(() => {
+         const profile = this.authService.profile();
+         if (profile) {
+            // Check Identity
+            if (!profile.username) this.showIdentityOnboarding.set(true);
+
+            // Update UI
+            this.userRole.set(profile.role ? profile.role.toUpperCase() : 'CIUDADANO');
+            this.userName.set(profile.username || profile.full_name || 'Agente'); // Set Name
+
+            if (profile.avatar_url) {
+               this.userAvatar.set(profile.avatar_url);
+            }
+         }
+      }, { injector: this.injector }); // Need injector in constructor or field?
       
       // Start Location Tracking silently
       this.locationService.startTracking();
+      this.loadNews();
     }
+  }
+
+  async loadNews() {
+     try {
+       // 1. Official News
+       const posts = await this.newsService.getActiveNews();
+       const mappedPosts = posts.map(p => ({
+          id: p.id!,
+          text: p.content,
+          type: this.mapType(p.type),
+          timestamp: new Date(p.created_at!)
+       }));
+
+       // 2. Proximity Reports (Incidentes Locales)
+       const pos = this.locationService.currentPosition();
+       if (pos) {
+         const nearby = await this.reportService.getNearbyReports(
+           pos.coords.latitude, 
+           pos.coords.longitude,
+           2000 // 2km
+         );
+         
+         const mappedReports = nearby.map(r => ({
+           id: r.id,
+           text: `REPORTE: ${r.type} - ${r.description || ''}`,
+           type: 'urgent' as 'urgent',
+           timestamp: new Date(r.created_at),
+           isReport: true
+         }));
+
+         this.newsItems.set([...mappedPosts, ...mappedReports].sort((a,b) => b.timestamp.getTime() - a.timestamp.getTime()));
+       } else {
+         this.newsItems.set(mappedPosts);
+       }
+     } catch(e) {
+       console.error('Error loading news', e);
+     }
+  }
+
+  mapType(type: string): 'urgent' | 'info' {
+     return type === 'ALERT' ? 'urgent' : 'info';
   }
 
   onOnboardingComplete() {
@@ -346,14 +476,33 @@ export class HomeComponent implements OnInit {
       localStorage.setItem('hasSeenOnboarding', 'true');
     }
     this.showOnboarding.set(false);
+    
+    // After tutorial, check if identity is needed
+    const profile = this.authService.profile();
+    if (profile && !profile.username) {
+      this.showIdentityOnboarding.set(true);
+    }
+  }
+
+  onIdentityComplete() {
+    this.showIdentityOnboarding.set(false);
+    // Refresh profile
+    this.authService.waitForAuthInit(); 
   }
 
   onNewsClick(item: NewsItem) {
     console.log('News clicked:', item);
+    // Maybe show full detail?
   }
 
   toggleProfileMenu() {
+    this.showNotifications.set(false); // Close other menu
     this.showProfileMenu.update(v => !v);
+  }
+
+  toggleNotifications() {
+     this.showProfileMenu.set(false); // Close other menu
+     this.showNotifications.update(v => !v);
   }
 
   navigateTo(path: string) {
@@ -398,7 +547,7 @@ export class HomeComponent implements OnInit {
        }
 
        const { latitude, longitude } = pos.coords;
-       const url = `https://www.google.com/maps?q=${latitude},${longitude}`;
+       const url = `https://www.google.com/maps?q=\${latitude},\${longitude}`;
        
        if (navigator.share) {
          navigator.share({
@@ -443,19 +592,33 @@ export class HomeComponent implements OnInit {
       clearTimeout(this.sosTimeout);
     }
   }
-
   async triggerPanicDirect() {
     // Direct panic from hold
     console.log('🚨 DIRECT PANIC TRIGGERED 🚨');
     this.toastService.warning("ACTIVANDO PÁNICO...", 1000);
-    await this.alertService.sendAlert(ReportType.PANIC, "Pánico activado por botón SOS (Hold)");
+    // Use ReportService
+    await this.reportService.createReport(ReportType.SOS, "Pánico activado por botón SOS (Hold)");
   }
 
   async onReportSelected(type: ReportType) {
-    if (type === ReportType.PANIC || type === ReportType.SOS) {
-       // Panic is immediate, no wizard
-       const result = await this.alertService.sendAlert(type);
+    if (type === ReportType.SOS) {
+       // SOS is immediate, no wizard
+       const result = await this.reportService.createReport(type, "Alerta SOS Manual");
        if (result) this.showReportMenu.set(false);
+
+    } else if (type === ReportType.RIESGO_VIDA) {
+       // CRITICAL: Force Manual Location for Precision
+       this.showReportMenu.set(false);
+       this.toastService.info("⚠️ POR FAVOR, MARCA LA UBICACIÓN EXACTA DE LA EMERGENCIA", 3000);
+       
+       this.mapComponent.enableSelectionMode();
+       
+       // Listen for one-time location selection
+       const sub = this.mapComponent.locationSelected.subscribe(coords => {
+         this.selectedReportType.set(type); // Now open wizard
+         sub.unsubscribe();
+       });
+
     } else {
        // Open Wizard for other types
        this.showReportMenu.set(false);
@@ -466,11 +629,17 @@ export class HomeComponent implements OnInit {
   }
 
   async captureEvidence() {
-    const blob = await this.cameraService.takePhoto();
-    if (blob) {
+    const photo = await this.cameraService.capturePhoto();
+    if (photo) {
+      // Convert data URL to blob
+      const response = await fetch(photo.dataUrl);
+      const blob = await response.blob();
+      
       this.reportEvidenceBlob.set(blob);
-      const url = URL.createObjectURL(blob);
-      this.reportEvidencePreview.set(this.sanitizer.bypassSecurityTrustUrl(url));
+
+      // Sanitize Blob URL NOT Data URL when possible
+      const objectUrl = URL.createObjectURL(blob);
+      this.reportEvidencePreview.set(this.sanitizer.bypassSecurityTrustUrl(objectUrl));
     }
   }
 
@@ -496,7 +665,15 @@ export class HomeComponent implements OnInit {
     if (success) {
       this.selectedReportType.set(null);
       this.clearEvidence();
-      // Toast handles inside service? AlertService does, ReportService calls it.
+      this.loadNews(); // Refresh news with new report
     }
+  }
+
+  openManualLocation() {
+    this.mapComponent.enableSelectionMode();
+  }
+
+  async handleNeighborValidation(reportId: string) {
+    await this.reportService.validateReport(reportId);
   }
 }

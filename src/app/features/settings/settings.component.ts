@@ -21,7 +21,7 @@ import { RouterModule } from '@angular/router';
         
         <!-- Section: Notificaciones -->
         <div class="bg-slate-900 border border-slate-800 rounded-lg p-4">
-           <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">NOTIFICACIONES</h3>
+           <h3 class="text-xs font-bold text-slate-300 uppercase tracking-widest mb-4">NOTIFICACIONES</h3>
            
            <div class="flex items-center justify-between mb-4">
              <span class="text-sm">Alertas de Emergencia (Push)</span>
@@ -36,11 +36,11 @@ import { RouterModule } from '@angular/router';
 
         <!-- Section: General -->
         <div class="bg-slate-900 border border-slate-800 rounded-lg p-4">
-           <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">GENERAL</h3>
+           <h3 class="text-xs font-bold text-slate-300 uppercase tracking-widest mb-4">GENERAL</h3>
            
            <div class="flex items-center justify-between mb-4">
              <span class="text-sm">Tema Oscuro</span>
-             <span class="text-xs text-slate-500 uppercase">Activo (Forzado)</span>
+             <span class="text-xs text-slate-300 uppercase">Activo (Forzado)</span>
            </div>
            
            <div class="flex items-center justify-between">
@@ -51,12 +51,12 @@ import { RouterModule } from '@angular/router';
 
         <!-- Section: Privacidad -->
         <div class="bg-slate-900 border border-slate-800 rounded-lg p-4">
-           <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">PRIVACIDAD</h3>
+           <h3 class="text-xs font-bold text-slate-300 uppercase tracking-widest mb-4">PRIVACIDAD</h3>
            
            <div class="flex items-center justify-between">
              <div class="pr-4">
                <span class="text-sm block">Retención de Datos Limitada</span>
-               <p class="text-[10px] text-slate-500 mt-1">Eliminar automáticamente mi historial de actividad y ubicaciones con más de 90 días de antigüedad.</p>
+               <p class="text-[10px] text-slate-300 mt-1">Eliminar automáticamente mi historial de actividad y ubicaciones con más de 90 días de antigüedad.</p>
              </div>
              <button (click)="toggleAutoDelete()" 
                      class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors"

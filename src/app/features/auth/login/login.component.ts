@@ -41,12 +41,12 @@ import { AuthService } from '../../../core/services/auth.service';
           <div class="flex justify-center mb-4">
             <div class="bg-slate-950/50 p-0.5 sm:p-1 rounded-lg border border-white/5 flex gap-1 transform scale-90 sm:scale-100">
               <button type="button" (click)="isSignUp.set(false)" 
-                  [class]="!isSignUp() ? 'bg-slate-800 text-sky-400 shadow-sm' : 'text-slate-500 hover:text-slate-300'"
+                  [class]="!isSignUp() ? 'bg-slate-800 text-sky-400 shadow-sm' : 'text-slate-300 hover:text-slate-300'"
                   class="px-5 py-1.5 text-xs font-bold rounded-md transition-all duration-200">
                   LOGIN
               </button>
               <button type="button" (click)="isSignUp.set(true)" 
-                  [class]="isSignUp() ? 'bg-slate-800 text-sky-400 shadow-sm' : 'text-slate-500 hover:text-slate-300'"
+                  [class]="isSignUp() ? 'bg-slate-800 text-sky-400 shadow-sm' : 'text-slate-300 hover:text-slate-300'"
                   class="px-5 py-1.5 text-xs font-bold rounded-md transition-all duration-200">
                   REGISTER
               </button>
@@ -68,7 +68,7 @@ import { AuthService } from '../../../core/services/auth.service';
 
           <div class="relative py-2 mb-3">
             <div class="absolute inset-0 flex items-center"><span class="w-full border-t border-slate-700"></span></div>
-            <div class="relative flex justify-center text-[10px] uppercase"><span class="bg-slate-900 px-2 text-slate-500">Or use email</span></div>
+            <div class="relative flex justify-center text-[10px] uppercase"><span class="bg-slate-900 px-2 text-slate-300">Or use email</span></div>
           </div>
 
           <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="space-y-3">
@@ -81,10 +81,7 @@ import { AuthService } from '../../../core/services/auth.service';
                   <input type="text" formControlName="fullName" class="block w-full bg-slate-950/50 border border-slate-700 text-white rounded-lg px-3 py-2 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 text-xs sm:text-sm" placeholder="Full Name">
                 </div>
 
-                <!-- Username -->
-                <div class="space-y-0.5">
-                  <input type="text" formControlName="username" class="block w-full bg-slate-950/50 border border-slate-700 text-white rounded-lg px-3 py-2 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 text-xs sm:text-sm" placeholder="Username (Auto)">
-                </div>
+
 
                 <!-- Phone -->
                  <div class="space-y-0.5">
@@ -171,7 +168,7 @@ export class LoginComponent {
     // Extended Registration Fields
     fullName: [''],
     phone: [''],
-    username: [''],
+
     terms: [false],
     dataConsent: [false]
   });
@@ -231,18 +228,17 @@ export class LoginComponent {
 
     if (this.loginForm.valid) {
       this.isLoading.set(true);
-      const { email, password, fullName, phone, username } = this.loginForm.value;
+      const { email, password, fullName, phone } = this.loginForm.value;
 
       try {
          // ... (try block logic)
          let error;
          
          if (this.isSignUp()) {
-            const finalUsername = username || this.generateUsername(fullName);
-            const metadata = { full_name: fullName, phone, username: finalUsername };
+            const metadata = { full_name: fullName, phone, username: '' };
             const res = await this.authService.signUp(email, password, metadata);
             error = res.error;
-            if (!error) alert(`Registration Successful! Welcome Agent ${finalUsername}. Check email to confirm.`);
+            if (!error) alert(`Registration Successful! Please check your email to confirm.`);
          } else {
             const res = await this.authService.signInWithPassword(email, password);
             error = res.error;

@@ -9,6 +9,7 @@ import 'leaflet-draw';
 import { Router } from '@angular/router';
 
 import { ZoneService, Zone } from '../services/zone.service';
+import { ReportService } from '../../../core/services/report.service';
 
 import { IncomingFeedComponent } from './components/incoming-feed/incoming-feed.component';
 
@@ -63,30 +64,50 @@ export class AdminDashboardComponent implements OnInit {
   private drawnItems = new L.FeatureGroup();
   private zonesLayer = new L.FeatureGroup();
 
-  // MOCK CRIMES [lat, lng, intensity]
-  private mockCrimes = [
-    [-34.77, -58.83, 0.5], // Center
-    [-34.772, -58.835, 0.8],
-    [-34.768, -58.825, 0.9],
-    [-34.775, -58.832, 0.6],
-    [-34.765, -58.828, 0.4]
-  ];
-
   constructor(
     @Inject(PLATFORM_ID) private platformId: Object, 
     private zoneService: ZoneService,
-    private router: Router
+    private router: Router,
+    private reportService: ReportService
   ) {}
 
   goToHome() {
     this.router.navigate(['/inicio']);
   }
 
+  goToZones() {
+    this.router.navigate(['/admin/zones']);
+  }
+
+  goToNews() {
+    this.router.navigate(['/admin/news']);
+  }
+
   ngOnInit() {
     if (isPlatformBrowser(this.platformId)) {
+      this.checkScreenSize();
+      
       this.initMap();
       this.loadZones();
+
+      // Listen for resize changes (debounced ideally, but simple for now)
+      window.addEventListener('resize', () => {
+         // Optionally we can auto-collapse on resize, but usually user intent matters more after load.
+         // For now, let's just ensure if they resize to mobile, we might check constraints.
+         // But checking on init is most important for "first load" experience.
+      });
     }
+  }
+
+  checkScreenSize() {
+      // Mobile Breakpoint (md: 768px)
+      if (window.innerWidth < 768) {
+         this.sidebarOpen.set(false);
+         this.feedOpen.set(false);
+      } else {
+         this.sidebarOpen.set(true);
+         this.feedOpen.set(true);
+      }
   }
 
   initMap() {
@@ -107,55 +128,30 @@ export class AdminDashboardComponent implements OnInit {
     this.map.addLayer(this.drawnItems);
     this.map.addLayer(this.zonesLayer);
 
-    // Leaflet Draw Control
-    const drawControl = new L.Control.Draw({
-      draw: {
-        polyline: false,
-        marker: false,
-        circlemarker: false,
-        polygon: {
-          allowIntersection: false,
-          drawError: {
-            color: '#e1e100', 
-            message: '<strong>Error:</strong> No puedes cruzar polígonos!' 
-          },
-          shapeOptions: {
-            color: '#10b981' // Drawing color
-          }
-        },
-        circle: false,
-        rectangle: {
-             shapeOptions: {
-             color: '#10b981'
-          }
-        }
-      },
-      edit: {
-        featureGroup: this.drawnItems, // For editing
-        remove: true
-      }
-    });
-    this.map.addControl(drawControl);
-
-    // Event: Created
-    this.map.on(L.Draw.Event.CREATED, (e: any) => {
-      const type = e.layerType;
-      const layer = e.layer;
-      
-      this.currentLayer = layer;
-      this.openZoneModal();
-      
-      this.drawnItems.addLayer(layer);
-    });
+    // Feature Groups
+    this.map.addLayer(this.drawnItems);
+    this.map.addLayer(this.zonesLayer);
+    
+    // Note: Zone editing moved to dedicated ZoneEditorComponent (/admin/zones)
   }
 
   // --- HEATMAP ---
-  toggleHeatmap() {
+  async toggleHeatmap() {
     this.showHeatmap.update(v => !v);
+    
     if (this.showHeatmap()) {
       if (!this.heatLayer) {
-        // @ts-ignore - leaflet.heat adds this
-        this.heatLayer = L.heatLayer(this.mockCrimes, { radius: 25, blur: 15, maxZoom: 17 }).addTo(this.map);
+        // Fetch Real Data
+        try {
+          const rawData = await this.reportService.getHeatmapData();
+          // Transform { latitude, longitude, intensity } -> [lat, lng, intensity]
+          const points = rawData.map(d => [d.latitude, d.longitude, d.intensity]);
+          
+          // @ts-ignore
+          this.heatLayer = L.heatLayer(points, { radius: 25, blur: 15, maxZoom: 17 }).addTo(this.map);
+        } catch (e) {
+           console.error('Heatmap error', e);
+        }
       } else {
         this.heatLayer.addTo(this.map);
       }

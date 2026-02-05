@@ -1,37 +1,70 @@
-import { Component, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, inject, signal } from '@angular/core';
+import { CommonModule, Location } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 import { AppConstants } from '../../core/constants/app.constants';
+import { MediaUploadService } from '../../core/services/media-upload.service';
+import { CameraService } from '../../core/services/camera.service';
+import { ToastService } from '../../core/services/toast.service';
+import { SupabaseService } from '../../core/services/supabase.service';
+import { InviteCardComponent } from '../../shared/components/invite-card/invite-card.component';
 
 @Component({
   selector: 'app-profile',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, InviteCardComponent],
   template: `
     <div class="min-h-screen bg-slate-950 text-white p-6 pt-20">
       
       <!-- HEADER -->
       <header class="flex items-center gap-4 mb-12">
-        <a routerLink="/inicio" class="p-2 -ml-2 rounded-full hover:bg-white/10 text-slate-400">
+        <button (click)="goBack()" class="p-2 -ml-2 rounded-full hover:bg-white/10 text-slate-400">
            <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
-        </a>
+        </button>
         <h1 class="text-2xl font-black tracking-tight">{{ UI.PROFILE.TITLE }}</h1>
       </header>
       
-      <!-- USER CARD -->
       <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 mb-8 relative overflow-hidden">
-         <div class="absolute top-0 right-0 p-4 opacity-50">
-            <svg class="w-24 h-24 text-slate-800 transform rotate-12 -mr-8 -mt-8" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
-         </div>
+          <div class="absolute top-0 right-0 p-4 opacity-10">
+             <svg class="w-32 h-32 text-white transform rotate-12 -mr-8 -mt-8" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+          </div>
 
-         <div class="relative z-10">
-            <h2 class="text-xl font-bold text-white mb-1">{{ auth.currentUser()?.email }}</h2>
-            <div class="inline-flex items-center gap-2 px-2 py-1 rounded bg-slate-800 border border-slate-700 text-xs font-mono text-slate-400 uppercase">
-              <span class="w-2 h-2 rounded-full" [ngClass]="auth.isAdmin() ? 'bg-red-500' : 'bg-emerald-500'"></span>
-              {{ auth.profile()?.role || 'CIVILIAN' }}
-            </div>
-         </div>
+          <div class="relative z-10 flex flex-col items-center sm:flex-row sm:items-start gap-6">
+             <!-- Avatar Section -->
+             <div class="relative group">
+                <div class="w-24 h-24 rounded-full border-2 border-emerald-500/50 overflow-hidden bg-slate-800 shadow-[0_0_20px_rgba(16,185,129,0.2)]">
+                   @if (auth.profile()?.avatar_url) {
+                      <img [src]="auth.profile()?.avatar_url" class="w-full h-full object-cover">
+                   } @else {
+                      <div class="w-full h-full flex items-center justify-center text-slate-500 text-3xl">
+                         {{ (auth.profile()?.username || 'Z')[0].toUpperCase() }}
+                      </div>
+                   }
+                </div>
+                <button 
+                  (click)="changeAvatar()"
+                  [disabled]="isUploading()"
+                  class="absolute bottom-0 right-0 p-2 bg-emerald-500 text-black rounded-full shadow-lg hover:bg-emerald-400 transition-all active:scale-95 disabled:grayscale"
+                >
+                   @if (isUploading()) {
+                      <div class="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin"></div>
+                   } @else {
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                   }
+                </button>
+             </div>
+
+             <div class="text-center sm:text-left">
+                <h2 class="text-2xl font-black text-white mb-1">
+                   {{ auth.profile()?.username ? '@' + auth.profile()?.username : 'Usuario Anónimo' }}
+                </h2>
+                <p class="text-slate-500 text-sm mb-4">{{ auth.currentUser()?.email }}</p>
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-800 border border-slate-700 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                  <span class="w-2 h-2 rounded-full" [ngClass]="auth.isAdmin() ? 'bg-red-500 pulse-red' : 'bg-emerald-500 pulse-green'"></span>
+                  {{ auth.profile()?.role || 'CIVILIAN' }}
+                </div>
+             </div>
+          </div>
       </div>
 
       <!-- ADMIN ACCESS (OPEN TO ALL FOR DEMO) -->
@@ -54,9 +87,17 @@ import { AppConstants } from '../../core/constants/app.constants';
         </div>
       }
 
+
+      <!-- REFERRAL SECTION -->
+      <!-- REFERRAL SECTION -->
+       <div class="mt-8">
+          <h3 class="text-xs font-bold text-slate-300 uppercase tracking-widest mb-4">MI RED VECINAL</h3>
+          <app-invite-card></app-invite-card>
+       </div>
+
       <!-- SETTINGS SECTION -->
       <div class="mt-8">
-         <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">{{ UI.PROFILE.SETTINGS }}</h3>
+         <h3 class="text-xs font-bold text-slate-300 uppercase tracking-widest mb-4">{{ UI.PROFILE.SETTINGS }}</h3>
          
          <!-- PRIVACY GROUP -->
          <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
@@ -66,7 +107,7 @@ import { AppConstants } from '../../core/constants/app.constants';
                </div>
                <div>
                   <h4 class="text-sm font-bold text-white">{{ UI.PROFILE.PRIVACY }}</h4>
-                  <p class="text-[10px] text-slate-500">{{ UI.PROFILE.PRIVACY_DESC }}</p>
+                  <p class="text-[10px] text-slate-300">{{ UI.PROFILE.PRIVACY_DESC }}</p>
                </div>
             </div>
 
@@ -90,11 +131,65 @@ import { AppConstants } from '../../core/constants/app.constants';
       </div>
 
     </div>
-  `
+  `,
+  styles: [`
+    @keyframes pulse-ring {
+      0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+      70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+      100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    }
+    @keyframes pulse-ring-red {
+      0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+      70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+      100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+    }
+    .pulse-green { animation: pulse-ring 2s infinite; }
+    .pulse-red { animation: pulse-ring-red 2s infinite; }
+  `]
 })
 export class ProfileComponent {
   auth = inject(AuthService);
   UI = AppConstants.UI;
+  private camera = inject(CameraService);
+  private upload = inject(MediaUploadService);
+  private toast = inject(ToastService);
+  private supabase = inject(SupabaseService).client;
+  private location = inject(Location);
+  
+  isUploading = signal(false);
+
+  async changeAvatar() {
+    const user = this.auth.currentUser();
+    if (!user) return;
+
+    try {
+      const photo = await this.camera.capturePhoto();
+      if (!photo) return;
+
+      this.isUploading.set(true);
+      
+      const blob = await fetch(photo.dataUrl).then(r => r.blob());
+      const publicUrl = await this.upload.uploadAvatar(blob, user.id);
+
+      if (publicUrl) {
+        const { error } = await this.supabase
+          .from('profiles')
+          .update({ avatar_url: publicUrl })
+          .eq('id', user.id);
+
+        if (error) throw error;
+        
+        this.toast.success('¡Foto de perfil actualizada!');
+        // Trigger profile refresh
+        this.auth.waitForAuthInit(); 
+      }
+    } catch (e: any) {
+      this.toast.error('Error al subir imagen');
+      console.error(e);
+    } finally {
+      this.isUploading.set(false);
+    }
+  }
 
   async requestDataDeletion() {
     // NOTE: Ideally use a Modal Service here. Using confirm for now but wrapped for clarity.
@@ -102,5 +197,9 @@ export class ProfileComponent {
        // Logic for deletion
        alert('Solicitud procesada.');
     }
+  }
+
+  goBack() {
+    this.location.back();
   }
 }

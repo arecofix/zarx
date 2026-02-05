@@ -1,7 +1,15 @@
-import { Injectable, signal, effect, inject, PLATFORM_ID } from '@angular/core';
+import { Injectable, signal, inject, PLATFORM_ID, isDevMode } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
-import { Geolocation, Position } from '@capacitor/geolocation';
-import { Haptics, ImpactStyle } from '@capacitor/haptics';
+import { Geolocation, Position, GeolocationOptions } from '@capacitor/geolocation';
+import { Capacitor } from '@capacitor/core';
+
+const GPS_TIMEOUTS = {
+  HIGH_ACCURACY: 30000,   // 30s - More time for GPS lock
+  LOW_ACCURACY: 45000,    // 45s - Maximum fallback time
+  MAX_AGE_HIGH: 10000,    // Accept 10s old high acc data
+  MAX_AGE_LOW: 120000,    // Accept 2min old low acc data
+  CACHE_VALIDITY: 60000   // Accept 60s old cache
+};
 
 @Injectable({
   providedIn: 'root'
@@ -11,6 +19,7 @@ export class LocationService {
   
   // Signals
   currentPosition = signal<Position | null>(null);
+  manualPosition = signal<Position | null>(null);
   trackingError = signal<string | null>(null);
   isTracking = signal(false);
 
@@ -22,86 +31,41 @@ export class LocationService {
   async getCurrentPosition(): Promise<Position | null> {
     if (!isPlatformBrowser(this.platformId)) return null;
 
-    // Return cached if very recent (e.g. < 10 seconds)
-    if (this.lastPosition && (Date.now() - this.lastPosition.timestamp < 10000)) {
+    // 1. Check Cache
+    if (this.isCacheValid()) {
+        console.log('📍 Using Cached Location');
         return this.lastPosition;
     }
 
     this.trackingError.set(null);
 
-    // 0. Check Permissions 
-    try {
-      const perm = await Geolocation.checkPermissions();
-      if (perm.location === 'denied') {
-        this.trackingError.set('Permiso de ubicación denegado.');
-        return null;
-      }
-    } catch (e) { /* Ignore permission check errors on web */ }
-    
-    // Helper: Standard API Promisified
-    const getWebPosition = (enableHighAccuracy: boolean, timeout: number): Promise<Position | null> => {
-       return new Promise((resolve) => {
-         if (!navigator.geolocation) { resolve(null); return; }
-         navigator.geolocation.getCurrentPosition(
-           (pos) => resolve({
-                timestamp: pos.timestamp,
-                coords: {
-                  latitude: pos.coords.latitude,
-                  longitude: pos.coords.longitude,
-                  accuracy: pos.coords.accuracy,
-                  altitude: pos.coords.altitude,
-                  altitudeAccuracy: pos.coords.altitudeAccuracy,
-                  heading: pos.coords.heading,
-                  speed: pos.coords.speed
-                }
-           }),
-           (err) => {
-             console.warn(`Web Geo (${enableHighAccuracy ? 'High' : 'Low'}) failed:`, err.message);
-             resolve(null);
-           },
-           { enableHighAccuracy, timeout, maximumAge: 30000 }
-         );
-       });
-    };
+    // 2. Check Permissions
+    const initialPerm = await this.checkPermissions();
+    if (!initialPerm) return null;
 
-    // STRATEGY 1: Web Standard (High Accuracy) - Fast attempt
-    console.log('📍 Trying Web GPS (High Accuracy)...');
-    let pos = await getWebPosition(true, 7000); // 7s timeout
+    // 3. Execution Strategies
+    let pos: Position | null = null;
+    const isNative = Capacitor.isNativePlatform();
 
-    // STRATEGY 2: Web Standard (Low Accuracy / WiFi / Cell) - Fallback
-    if (!pos) {
-        console.log('📍 Trying Web GPS (Low Accuracy)...');
-        pos = await getWebPosition(false, 10000); // 10s timeout
+    // Strategy A: Native First (Mobile)
+    if (isNative) {
+        pos = await this.tryCapacitorNative();
+        if (!pos) pos = await this.tryWebHighAccuracy(); // Fallback
+    } 
+    // Strategy B: Web First (PWA/Desktop)
+    else {
+        pos = await this.tryWebHighAccuracy();
+        if (!pos) pos = await this.tryWebLowAccuracy();
     }
 
-    // STRATEGY 3: Capacitor Native Bridge (Usually forces provider)
-    if (!pos) {
-        console.log('📍 Trying Capacitor Native...');
-        try {
-            const nativePos = await Geolocation.getCurrentPosition({
-                enableHighAccuracy: true, // Try high accuracy natively first
-                timeout: 10000,
-                maximumAge: 0
-            });
-            pos = nativePos;
-        } catch (err: any) {
-             console.warn('Capacitor Geo High failed, trying low:', err.message);
-             try {
-                // Last resort native low
-                pos = await Geolocation.getCurrentPosition({
-                    enableHighAccuracy: false,
-                    timeout: 5000,
-                    maximumAge: Infinity
-                });
-             } catch(e) {}
-        }
+    // 4. Fallback for Dev
+    if (!pos && isDevMode()) {
+       pos = this.getDevFallback();
     }
 
-    // RESULT
+    // 5. Final Result
     if (pos) {
-        console.log('✅ Location acquired:', pos.coords.latitude, pos.coords.longitude);
-        this.lastPosition = pos;
-        this.currentPosition.set(pos);
+        this.cachePosition(pos);
         return pos;
     } else {
         console.error('❌ All location strategies failed.');
@@ -110,31 +74,132 @@ export class LocationService {
     }
   }
 
+  // --- Strategies ---
+
+  private async tryWebHighAccuracy(): Promise<Position | null> {
+    console.info('📍 Iniciando adquisición de ubicación (Alta Precisión)...');
+    return this.getWebPosition(true, GPS_TIMEOUTS.HIGH_ACCURACY, GPS_TIMEOUTS.MAX_AGE_HIGH);
+  }
+
+  private async tryWebLowAccuracy(): Promise<Position | null> {
+    console.info('📍 Reintentando con precisión estándar...');
+    return this.getWebPosition(false, GPS_TIMEOUTS.LOW_ACCURACY, GPS_TIMEOUTS.MAX_AGE_LOW);
+  }
+
+  private async tryCapacitorNative(): Promise<Position | null> {
+    console.info('📍 Intentando GPS Nativo (Capacitor)...');
+    try {
+        return await Geolocation.getCurrentPosition({
+            enableHighAccuracy: true, 
+            timeout: 30000, 
+            maximumAge: GPS_TIMEOUTS.MAX_AGE_LOW 
+        });
+    } catch (err: any) {
+         console.warn('Capacitor Geo failed:', err.message);
+         // Fallback: Low accuracy native
+         try {
+            return await Geolocation.getCurrentPosition({
+                enableHighAccuracy: false,
+                timeout: 20000,
+                maximumAge: Infinity
+            });
+         } catch(e) { return null; }
+    }
+  }
+
+  // --- Helpers ---
+
+  private isCacheValid(): boolean {
+    return !!(this.lastPosition && (Date.now() - this.lastPosition.timestamp < GPS_TIMEOUTS.CACHE_VALIDITY));
+  }
+
+  private cachePosition(pos: Position) {
+    console.log('✅ Location acquired:', pos.coords.latitude, pos.coords.longitude);
+    this.lastPosition = pos;
+    this.currentPosition.set(pos);
+  }
+
+  private async checkPermissions(): Promise<boolean> {
+    try {
+      const perm = await Geolocation.checkPermissions();
+      if (perm.location === 'denied') {
+        this.trackingError.set('Permiso de ubicación denegado.');
+        return false;
+      }
+      return true;
+    } catch (e) { 
+        return true; // Ignore on web if check fails
+    }
+  }
+
+  private getWebPosition(enableHighAccuracy: boolean, timeout: number, maxAge: number): Promise<Position | null> {
+    return new Promise((resolve) => {
+      if (!navigator.geolocation) { resolve(null); return; }
+      
+      navigator.geolocation.getCurrentPosition(
+        (pos) => resolve({
+             timestamp: pos.timestamp,
+             coords: {
+               latitude: pos.coords.latitude,
+               longitude: pos.coords.longitude,
+               accuracy: pos.coords.accuracy,
+               altitude: pos.coords.altitude,
+               altitudeAccuracy: pos.coords.altitudeAccuracy,
+               heading: pos.coords.heading,
+               speed: pos.coords.speed
+             }
+        }),
+        (err) => {
+          // Silent failure for high accuracy if we have low accuracy fallback
+          if (enableHighAccuracy) {
+             console.log('📍 High accuracy timed out, trying standard accuracy...');
+          } else {
+             console.warn('📍 Standard location also failed:', err.message);
+          }
+          resolve(null);
+        },
+        { enableHighAccuracy, timeout, maximumAge: maxAge }
+      );
+    });
+  }
+
+  private getDevFallback(): Position {
+       console.info('ℹ️ Modo Desarrollo: Utilizando ubicación simulada (Falla de GPS)');
+       return {
+           timestamp: Date.now(),
+           coords: {
+               latitude: -34.7709,
+               longitude: -58.8335,
+               accuracy: 50,
+               altitude: 20,
+               altitudeAccuracy: 10,
+               heading: 0,
+               speed: 0
+           }
+       };
+  }
+
+  // --- Tracking ---
+
   async startTracking() {
     if (!isPlatformBrowser(this.platformId)) return;
     
-    // Haptic feedback for start
     try {
-        await Haptics.impact({ style: ImpactStyle.Light });
-    } catch {} 
-
-    try {
-      // Clear existing watch if any
-      this.stopTracking();
+      this.stopTracking(); 
 
       this.watchId = await Geolocation.watchPosition({
         enableHighAccuracy: true,
-        timeout: 20000, 
-        maximumAge: 0
+        timeout: GPS_TIMEOUTS.LOW_ACCURACY, 
+        maximumAge: 5000 
       }, (position, err) => {
         if (position) {
-          this.currentPosition.set(position);
-          this.lastPosition = position;
+          this.cachePosition(position);
           this.isTracking.set(true);
         }
         if (err) {
-          console.warn('Tracking error:', err);
-          // Don't set global error immediately on intermittent tracking fails
+          // Ignore timeout repeats in tracking
+          if ((err as any).code === 3) return;
+          console.warn('Tracking update warning:', err.message);
         }
       });
     } catch(e: unknown) {

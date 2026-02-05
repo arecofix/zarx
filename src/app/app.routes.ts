@@ -24,7 +24,7 @@ export const routes: Routes = [
   },
   {
     path: 'profile',
-    loadComponent: () => import('./features/profile/profile.component').then(m => m.ProfileComponent),
+    loadComponent: () => import('./features/home/components/user-profile/user-profile.component').then(m => m.UserProfileComponent),
     canActivate: [authGuard]
   },
   {
@@ -40,5 +40,24 @@ export const routes: Routes = [
     path: 'admin/monitoreo',
     loadComponent: () => import('./features/admin/monitoring/monitoring.component').then(m => m.MonitoringComponent),
     canActivate: [authGuard, adminGuard]
+  },
+  {
+    path: 'admin/dispatch',
+    loadComponent: () => import('./features/admin/components/dispatch-console/dispatch-console.component').then(m => m.DispatchConsoleComponent),
+    canActivate: [authGuard, adminGuard]
+  },
+  {
+    path: 'admin/zones',
+    loadComponent: () => import('./features/admin/components/zone-editor/zone-editor.component').then(m => m.ZoneEditorComponent),
+    canActivate: [authGuard, adminGuard]
+  },
+  {
+    path: 'admin/news',
+    loadComponent: () => import('./features/admin/components/news-admin/news-admin.component').then(m => m.NewsAdminComponent),
+    canActivate: [authGuard, adminGuard]
+  },
+  {
+    path: 'track/:sessionId',
+    loadComponent: () => import('./features/tracking/public-tracking.component').then(m => m.PublicTrackingComponent)
   }
 ];

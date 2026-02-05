@@ -14,7 +14,7 @@ export class ToastService {
   toasts = signal<Toast[]>([]);
 
   show(message: string, type: 'success' | 'error' | 'info' | 'warning' = 'info', duration: number = 3000) {
-    const id = Date.now();
+    const id = Date.now() + Math.floor(Math.random() * 10000);
     const toast: Toast = { message, type, duration, id };
     
     this.toasts.update(current => [...current, toast]);

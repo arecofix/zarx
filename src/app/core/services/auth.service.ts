@@ -103,10 +103,12 @@ export class AuthService {
   // --- Actions ---
 
   async signInWithEmail(email: string) {
+    const redirectUrl = `${window.location.origin}/inicio`;
+    
     return this.supabase.auth.signInWithOtp({
       email,
       options: {
-        emailRedirectTo: window.location.origin
+        emailRedirectTo: redirectUrl
       }
     });
   }
@@ -119,11 +121,13 @@ export class AuthService {
   }
 
   async signUp(email: string, password: string, metadata: { full_name: string; phone?: string; username: string }) {
+    const redirectUrl = `${window.location.origin}/inicio`;
+    
     return this.supabase.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo: window.location.origin,
+        emailRedirectTo: redirectUrl,
         data: {
           full_name: metadata.full_name,
           username: metadata.username,
@@ -139,12 +143,8 @@ export class AuthService {
        return { data: null, error: null };
     }
 
-    let redirectUrl = `${window.location.origin}/inicio`;
-    
-    // Fix for Capacitor/Android Localhost issue
-    if (Capacitor.isNativePlatform()) {
-      redirectUrl = 'https://zarx-arecofix.web.app/inicio';
-    }
+    // Dynamic Redirect URL based on current environment
+    const redirectUrl = `${window.location.origin}/inicio`;
 
     return this.supabase.auth.signInWithOAuth({
       provider,

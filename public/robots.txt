@@ -1,0 +1,45 @@
+# robots.txt para ZARX - Sistema de Seguridad Ciudadana
+# Optimizado para crawlers de IA y motores de búsqueda tradicionales
+
+# Permitir acceso a todos los bots responsables
+User-agent: *
+Allow: /
+
+# Optimizaciones para bots de IA
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: CCBot
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: Claude-Web
+Allow: /
+
+# Bloquear solo recursos que no deben indexarse
+Disallow: /api/
+Disallow: /*.json$
+Disallow: /assets/sounds/
+
+# Permitir explícitamente páginas importantes
+Allow: /inicio
+Allow: /auth/login
+Allow: /auth/register
+
+# Sitemap
+Sitemap: https://zarx.arecofix.com.ar/sitemap.xml
+
+# Crawl-delay para bots agresivos (en segundos)
+Crawl-delay: 1
+
+# Información adicional para crawlers
+# Este sitio es una aplicación web progresiva (PWA)
+# para reportes de seguridad ciudadana en tiempo real

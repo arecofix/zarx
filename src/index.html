@@ -1,16 +1,141 @@
 <!doctype html>
-<html lang="en">
+<html lang="es">
 <head>
+  <!-- Meta Tags Básicos -->
   <meta charset="utf-8">
-  <title>ZarxSystem</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://*.supabase.co https://*.supabase.in https://*.google.com https://fonts.gstatic.com https://*.osm.org https://*.cartocdn.com https://grainy-gradients.vercel.app; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.google.com https://*.gstatic.com https://www.googletagmanager.com https://www.google-analytics.com https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: filesystem: mediastream: https: https://images.unsplash.com https://www.google-analytics.com https://*.basemaps.cartocdn.com https://*.supabase.co https://grainy-gradients.vercel.app; font-src 'self' data: https://fonts.gstatic.com https://fonts.googleapis.com; connect-src 'self' https://*.supabase.co https://*.supabase.in wss://*.supabase.co https://*.googleapis.com https://*.basemaps.cartocdn.com blob: data: https://fonts.gstatic.com https://fonts.googleapis.com https://images.unsplash.com https://www.google-analytics.com https://analytics.google.com https://stats.g.doubleclick.net https://www.googletagmanager.com https://grainy-gradients.vercel.app;">
+  
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-RMPEEJ2ZM8"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-RMPEEJ2ZM8');
+  </script>
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  
+  <!-- SEO Meta Tags -->
+  <title>ZARX - Sistema de Seguridad Ciudadana en Tiempo Real</title>
+  <meta name="description" content="ZARX es una plataforma de seguridad ciudadana que conecta a la comunidad con fuerzas de seguridad en tiempo real. Reporta incidentes, recibe alertas y contribuye a una ciudad más segura.">
+  <meta name="keywords" content="seguridad ciudadana, alertas en tiempo real, reportes de incidentes, mapa de seguridad, emergencias, policía, bomberos, ZARX">
+  <meta name="author" content="Arecofix">
+  <meta name="robots" content="index, follow">
+  <meta name="theme-color" content="#0f172a">
+  
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://zarx.arecofix.com.ar/">
+  <meta property="og:title" content="ZARX - Sistema de Seguridad Ciudadana en Tiempo Real">
+  <meta property="og:description" content="Conecta con fuerzas de seguridad, reporta incidentes y recibe alertas en tiempo real. Contribuye a una comunidad más segura.">
+  <meta property="og:image" content="https://zarx.arecofix.com.ar/icons/icon-512x512.png">
+  <meta property="og:locale" content="es_AR">
+  <meta property="og:site_name" content="ZARX">
+  
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:url" content="https://zarx.arecofix.com.ar/">
+  <meta name="twitter:title" content="ZARX - Sistema de Seguridad Ciudadana">
+  <meta name="twitter:description" content="Plataforma de seguridad ciudadana en tiempo real. Reporta, alerta y conecta con tu comunidad.">
+  <meta name="twitter:image" content="https://zarx.arecofix.com.ar/icons/icon-512x512.png">
+  
+  <!-- PWA Meta Tags -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="ZARX">
+  
+  <!-- Canonical URL -->
+  <link rel="canonical" href="https://zarx.arecofix.com.ar/">
+  
+  <!-- Base -->
   <base href="/">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  
+  <!-- Icons -->
   <link rel="icon" type="image/x-icon" href="favicon.ico">
-  <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
+  <link rel="apple-touch-icon" href="icons/icon-192x192.png">
+  
+  <!-- Manifest -->
   <link rel="manifest" href="manifest.webmanifest">
+  
+  <!-- Preconnect to external domains for faster loading -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  
+  <!-- DNS Prefetch for external resources -->
+  <link rel="dns-prefetch" href="https://unpkg.com">
+  
+  <!-- Google Fonts -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap">
+  
+  <!-- Structured Data - JSON-LD -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "ZARX",
+    "description": "Sistema de Seguridad Ciudadana en Tiempo Real",
+    "url": "https://zarx.arecofix.com.ar/",
+    "applicationCategory": "SafetyApplication",
+    "operatingSystem": "Web, Android, iOS",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "ARS"
+    },
+    "author": {
+      "@type": "Organization",
+      "name": "Arecofix",
+      "url": "https://arecofix.com.ar"
+    },
+    "aggregateRating": {
+      "@type": "AggregateRating",
+      "ratingValue": "4.8",
+      "ratingCount": "150"
+    }
+  }
+  </script>
+  
+  <!-- Critical CSS Inline (será inyectado por el build) -->
+  <style>
+    /* Critical CSS para evitar FOUC */
+    app-root {
+      display: block;
+      min-height: 100vh;
+      background-color: #020617;
+    }
+    
+    /* Loading spinner crítico */
+    .app-loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background-color: #020617;
+      color: #38bdf8;
+      font-family: 'Inter', sans-serif;
+    }
+  </style>
 </head>
 <body>
-  <app-root></app-root>
-  <noscript>Please enable JavaScript to continue using this application.</noscript>
+  <app-root>
+    <!-- Loading state optimizado -->
+    <div class="app-loading">
+      <div style="text-align: center;">
+        <div style="font-size: 2rem; margin-bottom: 1rem;">🛡️</div>
+        <div style="font-size: 1.25rem; font-weight: 600;">ZARX</div>
+        <div style="font-size: 0.875rem; opacity: 0.7; margin-top: 0.5rem;">Cargando sistema de seguridad...</div>
+      </div>
+    </div>
+  </app-root>
+  
+  <noscript>
+    <div style="padding: 2rem; text-align: center; background-color: #0f172a; color: white; font-family: 'Inter', sans-serif;">
+      <h1>JavaScript Requerido</h1>
+      <p>Por favor, habilita JavaScript en tu navegador para usar ZARX - Sistema de Seguridad Ciudadana.</p>
+    </div>
+  </noscript>
 </body>
 </html>

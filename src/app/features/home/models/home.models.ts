@@ -3,6 +3,7 @@ export interface NewsItem {
   text: string;
   type: 'urgent' | 'info';
   timestamp: Date;
+  isReport?: boolean;
 }
 
 export interface UserProfile {

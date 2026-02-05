@@ -18,7 +18,7 @@ import { Router } from '@angular/router';
         </div>
         <div class="flex items-center gap-3">
           <div class="flex flex-col items-end">
-            <span class="text-[10px] uppercase text-slate-500 font-bold">Status</span>
+            <span class="text-[10px] uppercase text-slate-300 font-bold">Status</span>
             <div class="flex items-center gap-2">
               <span class="w-2 h-2 rounded-full" [class.bg-green-500]="isOnline()" [class.bg-slate-600]="!isOnline()"></span>
               <span class="font-bold text-sm" [class.text-green-400]="isOnline()" [class.text-slate-400]="!isOnline()">
@@ -87,22 +87,22 @@ import { Router } from '@angular/router';
            <div class="grid grid-cols-2 gap-3">
               <div class="bg-black/30 p-3 rounded-lg text-center">
                  <p class="text-2xl font-black text-white">12</p>
-                 <p class="text-[10px] uppercase text-slate-500 tracking-wider">Missions</p>
+                 <p class="text-[10px] uppercase text-slate-300 tracking-wider">Missions</p>
               </div>
               <div class="bg-black/30 p-3 rounded-lg text-center">
                  <p class="text-2xl font-black text-sky-400">4.5h</p>
-                 <p class="text-[10px] uppercase text-slate-500 tracking-wider">Patrol Time</p>
+                 <p class="text-[10px] uppercase text-slate-300 tracking-wider">Patrol Time</p>
               </div>
               <div class="bg-black/30 p-3 rounded-lg text-center col-span-2">
                  <p class="text-xl font-bold text-green-400">EXCELLENT</p>
-                 <p class="text-[10px] uppercase text-slate-500 tracking-wider">Performance Rating</p>
+                 <p class="text-[10px] uppercase text-slate-300 tracking-wider">Performance Rating</p>
               </div>
            </div>
         </div>
 
         <!-- QUICK ACTIONS -->
         <div class="col-span-1 md:col-span-3 bg-slate-900/50 rounded-xl border border-white/5 p-5 backdrop-blur-sm">
-           <h2 class="text-sm font-bold uppercase text-slate-500 mb-3 tracking-wider">Quick Actions</h2>
+           <h2 class="text-sm font-bold uppercase text-slate-300 mb-3 tracking-wider">Quick Actions</h2>
            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
               <button (click)="navToMap()" class="p-4 bg-sky-600/20 border border-sky-500/30 rounded-lg hover:bg-sky-600/30 transition flex flex-col items-center gap-2 group">
                  <svg class="h-6 w-6 text-sky-400 group-hover:scale-110 transition" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0121 18.382V7.618a1 1 0 01-1.447-.894L15 7m0 13V7" /></svg>

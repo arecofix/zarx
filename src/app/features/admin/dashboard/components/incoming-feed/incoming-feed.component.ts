@@ -109,12 +109,22 @@ import { DatePipe } from '@angular/common';
                         📍 MAPA
                      </button>
 
-                     <!-- Resolve -->
+                     <!-- Actions -->
+                     <!-- Reject -->
                      <button 
-                        (click)="resolve(alert)"
-                        class="flex items-center justify-center gap-1 p-2 bg-slate-700 hover:bg-slate-600 rounded text-slate-300 hover:text-white transition-colors text-xs font-bold"
+                        (click)="reject(alert)"
+                        class="flex items-center justify-center gap-1 p-2 bg-slate-700 hover:bg-slate-600 rounded text-slate-300 hover:text-red-400 transition-colors text-xs font-bold"
+                        title="Rechazar / Falsa Alarma"
                      >
-                        ✅ OK
+                        🚫
+                     </button>
+
+                     <!-- Validate (Resolve) -->
+                     <button 
+                        (click)="validate(alert)"
+                        class="flex items-center justify-center gap-1 p-2 bg-slate-700 hover:bg-emerald-600 rounded text-slate-300 hover:text-white transition-colors text-xs font-bold col-span-2"
+                     >
+                        ✅ VALIDAR
                      </button>
 
                   </div>
@@ -123,7 +133,7 @@ import { DatePipe } from '@angular/common';
             </div>
 
          } @empty {
-            <div class="flex flex-col items-center justify-center h-64 text-slate-500">
+            <div class="flex flex-col items-center justify-center h-64 text-slate-300">
                <span class="text-4xl mb-2">😴</span>
                <p class="text-sm">Sin alertas pendientes</p>
             </div>
@@ -169,9 +179,26 @@ export class IncomingFeedComponent implements OnInit, OnDestroy {
     }
   }
 
-  resolve(alert: Alert) {
-     if (confirm('¿Marcar alerta como resuelta/archivada?')) {
-        this.dashboardService.resolveAlert(alert.id!);
+  processAlert(alert: Alert, status: 'RESOLVED' | 'FALSE_ALARM' | 'ENGAGED') {
+     let feedback: string | null = null;
+     
+     // Ask for feedback only for final states
+     if (status !== 'ENGAGED') {
+       if (!confirm(`¿Confirmas ${status === 'RESOLVED' ? 'VALIDAR' : 'RECHAZAR'} esta alerta?`)) return;
+       
+       // Simple interaction for MVP (Can be replaced by Modal later)
+       const userMsg = prompt("Mensaje para el vecino (Opcional):", "");
+       if (userMsg !== null) { // If not cancelled
+          feedback = userMsg;
+       } else {
+          return; // Cancelled
+       }
      }
+     
+     this.dashboardService.verifyAlert(alert.id!, status, feedback || undefined);
   }
+
+  // Aliases for Template
+  validate(alert: Alert) { this.processAlert(alert, 'RESOLVED'); }
+  reject(alert: Alert) { this.processAlert(alert, 'FALSE_ALARM'); }
 }

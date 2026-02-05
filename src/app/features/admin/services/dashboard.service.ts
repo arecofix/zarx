@@ -50,54 +50,79 @@ export class DashboardService {
     try {
       this.isLoading.set(true);
       
-      // Attempt 1: Full Join
-      const { data, error } = await this.supabase
-        .from('alerts')
+      // Attempt 1: Explicit Join with correct FK syntax
+      let { data, error } = await this.supabase
+        .from('reports')
         .select(`
           *,
-          profiles:user_id (*)
+          profiles:user_id(id, full_name, avatar_url, phone, username, role)
         `)
         .order('created_at', { ascending: false })
         .limit(50);
 
-      if (error) {
-         console.warn('Advanced join failed, trying simplified fetch', error);
-         throw error; // Trigger fallback
+      // Attempt 2: Fallback if Join fails
+      if (error || !data) {
+        console.warn('Join failed, trying fallback fetch...');
+        const { data: simpleData, error: simpleError } = await this.supabase
+          .from('reports')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(50);
+        
+        if (simpleError) throw simpleError;
+        
+        if (simpleData) {
+          // Fetch profiles separately for these reports
+          const userIds = simpleData.map(r => r.user_id);
+          const { data: profData } = await this.supabase
+            .from('profiles')
+            .select('id, full_name, avatar_url, phone')
+            .in('id', userIds);
+          
+          data = simpleData.map(r => ({
+            ...r,
+            profiles: profData?.find(p => p.id === r.user_id) || null
+          }));
+        }
       }
 
       if (data) {
-        // Normalize profiles data
         const alerts = data.map((alert: any) => {
-           // Handle case where profile might be returned as single object or array
            const profileData = Array.isArray(alert.profiles) ? alert.profiles[0] : alert.profiles;
+           
+           let lat = alert.latitude; 
+           let lng = alert.longitude;
+           
+           if (!lat && alert.location) {
+              if (typeof alert.location === 'object' && alert.location.coordinates) {
+                  [lng, lat] = alert.location.coordinates;
+              } else if (typeof alert.location === 'string' && alert.location.startsWith('POINT')) {
+                  const parts = alert.location.replace('POINT(', '').replace(')', '').split(' ');
+                  if (parts.length === 2) {
+                      lng = parseFloat(parts[0]);
+                      lat = parseFloat(parts[1]);
+                  }
+              }
+           }
+
            return {
              ...alert,
+             latitude: lat,
+             longitude: lng,
              profiles: profileData
            };
         });
         this.incomingAlerts.set(alerts);
       }
-
     } catch (error) {
-      console.error('Error fetching dashboard alerts (First Try):', error);
-      
-      // Fallback: Fetch alerts only (ignore profile join failures to ensure dashboard works)
-      const { data: simpleData } = await this.supabase
-        .from('alerts')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(50);
-        
-      if (simpleData) {
-         this.incomingAlerts.set(simpleData as any[]);
-      }
+      console.error('Fatal error fetching alerts:', error);
     } finally {
       this.isLoading.set(false);
     }
   }
 
   /**
-   * Subscribe to new incoming alerts
+   * Subscribe to new incoming reports
    */
   subscribeToAlerts() {
     if (this.subscription) return;
@@ -106,12 +131,10 @@ export class DashboardService {
       .channel('dashboard-feed')
       .on(
         'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'alerts' },
+        { event: 'INSERT', schema: 'public', table: 'reports' },
         async (payload) => {
-          const newAlertId = payload.new['id'];
-          // We need to fetch the full alert to get the profile association
-          // because the INSERT payload only contains raw table data
-          await this.fetchAndPrependAlert(newAlertId);
+          const newId = payload.new['id'];
+          await this.fetchAndPrependAlert(newId);
         }
       )
       .subscribe();
@@ -127,41 +150,78 @@ export class DashboardService {
   private async fetchAndPrependAlert(alertId: string) {
     try {
       const { data, error } = await this.supabase
-        .from('alerts')
+        .from('reports')
         .select(`
           *,
-          profiles (*)
+          profiles:user_id ( full_name, avatar_url, phone )
         `)
         .eq('id', alertId)
         .single();
         
       if (data) {
-        // Prepend to signal
-        this.incomingAlerts.update(current => [data as any, ...current]);
+        const profileData = Array.isArray((data as any).profiles) ? (data as any).profiles[0] : (data as any).profiles;
         
-        // UX
+        // Manual Location Parse
+        let lat = (data as any).latitude;
+        let lng = (data as any).longitude;
+        const loc = (data as any).location;
+
+        if (!lat && loc) {
+            if (typeof loc === 'object' && loc.coordinates) {
+                [lng, lat] = loc.coordinates;
+            } else if (typeof loc === 'string' && loc.startsWith('POINT')) {
+                const parts = loc.replace('POINT(', '').replace(')', '').split(' ');
+                if (parts.length === 2) {
+                    lng = parseFloat(parts[0]);
+                    lat = parseFloat(parts[1]);
+                }
+            }
+        }
+
+        const normalized = { 
+            ...data, 
+            latitude: lat,
+            longitude: lng,
+            profiles: profileData 
+        };
+
+        this.incomingAlerts.update(current => [normalized as any, ...current]);
         this.playSound();
       }
     } catch (error) {
-      console.error('Error fetching new alert details:', error);
+      console.error('Error fetching new report details:', error);
     }
   }
 
   /**
-   * Action: Resolve/Archive Alert
+   * Action: Verify/Resolve Alert with Feedback
    */
-  async resolveAlert(alertId: string) {
-    // Optimistic update
-    this.incomingAlerts.update(list => list.filter(a => a.id !== alertId));
+  async verifyAlert(alertId: string, status: 'RESOLVED' | 'FALSE_ALARM' | 'ENGAGED', feedback?: string) {
+    // Optimistic Remove from Feed if Resolved/False
+    if (status !== 'ENGAGED') {
+       this.incomingAlerts.update(list => list.filter(a => a.id !== alertId));
+    }
+
+    // Map UI Status 'RESOLVED' (Button "Validar") to DB Status 'VALIDATED' (Triggers Points)
+    // 'FALSE_ALARM' stays same.
+    let dbStatus = status;
+    if (status === 'RESOLVED') dbStatus = 'VALIDATED' as any;
+
+    const updateData: any = { status: dbStatus };
+    if (feedback) updateData.admin_feedback = feedback;
 
     const { error } = await this.supabase
-      .from('alerts')
-      .update({ status: 'RESOLVED' })
+      .from('reports')
+      .update(updateData)
       .eq('id', alertId);
 
     if (error) {
-      console.error('Error resolving alert:', error);
-      // Revert if needed, but for MVP keep it simple
+      console.error('Error updating report status:', error);
     }
+  }
+
+  // Legacy wrapper
+  async resolveAlert(alertId: string) {
+    return this.verifyAlert(alertId, 'RESOLVED');
   }
 }
