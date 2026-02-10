@@ -17,45 +17,43 @@ export class CameraService {
 
   /**
    * Capture photo from camera (works on web and native)
-   * Non-blocking: runs in background
    */
   async capturePhoto(): Promise<CapturedPhoto | null> {
+    return this.getPhoto(CameraSource.Camera);
+  }
+
+  /**
+   * Get photo from gallery
+   */
+  async getPhotoFromGallery(): Promise<CapturedPhoto | null> {
+    return this.getPhoto(CameraSource.Photos); 
+  }
+
+  private async getPhoto(source: CameraSource): Promise<CapturedPhoto | null> {
     try {
-      // Request permissions first
-      if (Capacitor.isNativePlatform()) {
-        const permissions = await Camera.requestPermissions();
-        if (permissions.camera !== 'granted') {
-          console.warn('Camera permission denied');
-          return null;
-        }
+      if (Capacitor.isNativePlatform() && source === CameraSource.Camera) {
+          const permissions = await Camera.requestPermissions();
+          if (permissions.camera !== 'granted') return null;
       }
 
-      // Capture photo
       const photo: Photo = await Camera.getPhoto({
         resultType: CameraResultType.DataUrl,
-        source: CameraSource.Camera,
-        quality: 80, // Balance between quality and file size
+        source: source,
+        quality: 80,
         allowEditing: false,
-        saveToGallery: false,
-        width: 1920, // Max width for performance
+        width: 1920, 
         height: 1080
       });
 
-      if (!photo.dataUrl) {
-        console.error('No photo data returned');
-        return null;
-      }
+      if (!photo.dataUrl) return null;
 
       return {
         dataUrl: photo.dataUrl,
         format: photo.format || 'jpeg'
       };
     } catch (error: any) {
-      // User cancelled or error occurred
-      if (error.message?.includes('User cancelled')) {
-        console.log('User cancelled photo capture');
-      } else {
-        console.error('Error capturing photo:', error);
+      if (!error.message?.includes('cancelled')) {
+        console.error('Camera Error:', error);
       }
       return null;
     }

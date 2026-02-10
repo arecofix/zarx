@@ -3,6 +3,7 @@ import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import * as L from 'leaflet';
 import 'leaflet.heat'; 
+import { AppConstants } from '../../../core/constants/app.constants';
 // Note: leaflet-draw is usually imported via side-effects or L.Control.Draw references.
 // We might need to ensure 'leaflet-draw' is loaded.
 import 'leaflet-draw'; 
@@ -79,8 +80,16 @@ export class AdminDashboardComponent implements OnInit {
     this.router.navigate(['/admin/zones']);
   }
 
+  goToUsers() {
+    this.router.navigate(['/admin/users']);
+  }
+
   goToNews() {
     this.router.navigate(['/admin/news']);
+  }
+
+  goToReports() {
+    this.router.navigate(['/admin/reports']);
   }
 
   ngOnInit() {
@@ -111,8 +120,8 @@ export class AdminDashboardComponent implements OnInit {
   }
 
   initMap() {
-    const lat = -34.77; 
-    const lng = -58.83;
+    const lat = AppConstants.CONFIG.LOCATION.DEFAULT_LAT; 
+    const lng = AppConstants.CONFIG.LOCATION.DEFAULT_LNG;
 
     this.map = L.map(this.mapContainer.nativeElement, {
       zoomControl: false,

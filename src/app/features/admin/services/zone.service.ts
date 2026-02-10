@@ -103,6 +103,13 @@ export class ZoneService {
     return layers;
   }
 
+  async deleteZone(id: string) {
+    return this.supabase
+      .from('zones')
+      .delete()
+      .eq('id', id);
+  }
+
   private getColorByType(type: string): string {
     switch(type) {
       case 'SAFE': return '#10b981'; // Emerald

@@ -11,6 +11,7 @@ import { MessagingService } from '../../../../core/services/messaging.service';
 import { FormsModule } from '@angular/forms';
 import { Profile } from '../../../../core/models';
 
+import { ReportService } from '../../../../core/services/report.service';
 import { AdminHeatmapComponent } from '../admin-heatmap/admin-heatmap.component';
 
 @Component({
@@ -324,7 +325,7 @@ export class DispatchConsoleComponent implements OnInit, OnDestroy {
   private supabase = inject(SupabaseService).client;
   private audioService = inject(AudioService);
   private toastService = inject(ToastService);
-  private alertService = inject(AlertService);
+  private reportService = inject(ReportService);
   private router = inject(Router);
   private location = inject(Location);
   private messaging = inject(MessagingService);
@@ -487,11 +488,7 @@ export class DispatchConsoleComponent implements OnInit, OnDestroy {
     const originalStatus = alert.status;
     this.handleAlertUpdate({ ...alert, status: 'VALIDATED' });
 
-    const success = await this.alertService.updateAlertStatus({
-      id: alert.id!,
-      status: 'VALIDATED',
-      userId: alert.user_id
-    });
+    const success = await this.reportService.approveReport(alert.id!);
     
     if (success) {
       this.toastService.success('Alerta validada y usuario notificado');
@@ -512,11 +509,7 @@ export class DispatchConsoleComponent implements OnInit, OnDestroy {
     const originalStatus = alert.status;
     this.handleAlertUpdate({ ...alert, status: 'FALSE_ALARM' });
 
-    const success = await this.alertService.updateAlertStatus({
-      id: alert.id!,
-      status: 'FALSE_ALARM',
-      userId: alert.user_id
-    });
+    const success = await this.reportService.rejectReport(alert.id!);
 
     if (success) {
       this.toastService.info('Marcada como falsa alarma');
@@ -531,11 +524,7 @@ export class DispatchConsoleComponent implements OnInit, OnDestroy {
     const originalStatus = alert.status;
     this.handleAlertUpdate({ ...alert, status: 'RESOLVED' });
 
-    const success = await this.alertService.updateAlertStatus({
-      id: alert.id!,
-      status: 'RESOLVED',
-      userId: alert.user_id
-    });
+    const success = await this.reportService.resolveReport(alert.id!);
 
     if (success) {
       this.toastService.success('Alerta resuelta');
@@ -553,7 +542,7 @@ export class DispatchConsoleComponent implements OnInit, OnDestroy {
     const originalStatus = alert.status;
     this.handleAlertUpdate({ ...alert, status });
 
-    const success = await this.alertService.updateAlertStatus({ id, status });
+    const success = await this.reportService.updateReportStatusDispatch(id, status);
     
     if (success) {
       this.toastService.success(`Estado actualizado a ${status}`);

@@ -2,7 +2,7 @@ import { Component, OnInit, OnDestroy, afterNextRender, inject, signal, effect }
 import { ToastController } from '@ionic/angular/standalone';
 import { CommonModule } from '@angular/common';
 import { MapService } from '../../services/map.service';
-import { SosButtonComponent } from '../../../emergency/sos-button.component';
+import { PanicButtonComponent } from '../../../../shared/components/panic-button/panic-button.component';
 import { AuthService } from '../../../../core/services/auth.service';
 import { Router, RouterModule } from '@angular/router';
 import { addIcons } from 'ionicons';
@@ -11,7 +11,7 @@ import { warningOutline } from 'ionicons/icons';
 @Component({
   selector: 'app-map-view',
   standalone: true,
-  imports: [CommonModule, SosButtonComponent, RouterModule],
+  imports: [CommonModule, PanicButtonComponent, RouterModule],
   template: `
     <!-- MAIN CONTAINER -->
     <div class="relative w-screen h-screen overflow-hidden bg-zarx-dark">
@@ -137,7 +137,7 @@ import { warningOutline } from 'ionicons/icons';
       }
 
       <!-- FEATURE: SOS BUTTON -->
-      <app-sos-button></app-sos-button>
+      <app-panic-button></app-panic-button>
     </div>
   `,
   styles: [`

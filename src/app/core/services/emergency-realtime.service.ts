@@ -5,6 +5,14 @@ import { ToastService } from './toast.service';
 import { RealtimeChannel } from '@supabase/supabase-js';
 import { Router } from '@angular/router';
 import { SosService } from './sos.service';
+import { AppConstants } from '../constants/app.constants';
+
+interface SOSPayload {
+  alert_id: string;
+  victim_id: string;
+  lat: number;
+  lng: number;
+}
 
 @Injectable({
   providedIn: 'root'
@@ -34,26 +42,15 @@ export class EmergencyRealtimeService {
 
     this.broadcastChannel
       .on('broadcast', { event: 'SOS_ALERT' }, async (payload) => {
-         console.log('🚨 SOS BROADCAST RECEIVED:', payload);
-         await this.handleEmergencyBroadcast(payload['payload']);
+         // Payload is wrapped in { payload: T, event: string, ... }
+         const data = payload['payload'] as SOSPayload;
+         await this.handleEmergencyBroadcast(data);
       })
-      .subscribe((status) => {
-         if (status === 'SUBSCRIBED') {
-            console.log('✅ Connected to Emergency Broadcast Network');
-         }
-      });
+      .subscribe();
   }
 
   // 2. Handle Incoming SOS
-  private async handleEmergencyBroadcast(data: any) {
-     /* 
-       Payload: { 
-         alert_id: string, 
-         victim_id: string, 
-         lat: number, 
-         lng: number 
-       } 
-     */
+  private async handleEmergencyBroadcast(data: SOSPayload) {
      const pos = await this.location.getCurrentPosition();
      if (!pos) return;
 
@@ -64,7 +61,7 @@ export class EmergencyRealtimeService {
         data.lng
      );
 
-     if (dist <= 500) {
+     if (dist <= AppConstants.CONFIG.EMERGENCY.BROADCAST_DISTANCE_METERS) {
         // ACTIVATE RESCUE MODE
         this.activeEmergencyId.set(data.alert_id);
         this.sosService.activateLocalEmergency(); // Hijack UI logic
@@ -82,32 +79,39 @@ export class EmergencyRealtimeService {
     if (this.trackingInterval) clearInterval(this.trackingInterval);
     
     this.trackingInterval = setInterval(async () => {
-       const pos = this.location.currentPosition(); // Signals are instant
-       if (pos) {
-          // Send to DB (for persistence/history)
-          await this.supabase.from('emergency_tracking').insert({
-             emergency_id: emergencyId,
-             user_id: (await this.supabase.auth.getUser()).data.user?.id,
-             latitude: pos.coords.latitude,
-             longitude: pos.coords.longitude,
-             timestamp: new Date().toISOString(),
-             accuracy: pos.coords.accuracy,
-             speed: pos.coords.speed,
-             heading: pos.coords.heading
-          });
+       try {
+           const pos = this.location.currentPosition(); // Signals are instant
+           if (pos) {
+              const { data: userData } = await this.supabase.auth.getUser();
+              if (!userData.user) return;
 
-          // Also Broadcast for live maps (faster)
-          this.broadcastChannel?.send({
-             type: 'broadcast',
-             event: 'TRACKING_UPDATE',
-             payload: {
-                emergency_id: emergencyId,
-                lat: pos.coords.latitude,
-                lng: pos.coords.longitude
-             }
-          });
+              // Send to DB (for persistence/history)
+              await this.supabase.from('emergency_tracking').insert({
+                 emergency_id: emergencyId,
+                 user_id: userData.user.id,
+                 latitude: pos.coords.latitude,
+                 longitude: pos.coords.longitude,
+                 timestamp: new Date().toISOString(),
+                 accuracy: pos.coords.accuracy,
+                 speed: pos.coords.speed,
+                 heading: pos.coords.heading
+              });
+
+              // Also Broadcast for live maps (faster)
+              this.broadcastChannel?.send({
+                 type: 'broadcast',
+                 event: 'TRACKING_UPDATE',
+                 payload: {
+                    emergency_id: emergencyId,
+                    lat: pos.coords.latitude,
+                    lng: pos.coords.longitude
+                 }
+              });
+           }
+       } catch (error) {
+           console.error('Tracking error:', error);
        }
-    }, 5000); // Every 5 seconds
+    }, AppConstants.CONFIG.EMERGENCY.TRACKING_INTERVAL_MS);
   }
 
   stopTracking() {

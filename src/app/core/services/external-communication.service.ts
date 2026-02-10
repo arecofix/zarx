@@ -106,9 +106,9 @@ export class ExternalCommunicationService {
       lines.push(`🗺️ *Ver en Mapa:* https://www.google.com/maps/search/?api=1&query=${alert.latitude},${alert.longitude}`);
     }
 
-    if (alert.media_url) {
+    if (alert.evidence_url) {
       lines.push('');
-      lines.push(`📸 *Evidencia:* ${alert.media_url}`);
+      lines.push(`📸 *Evidencia:* ${alert.evidence_url}`);
     }
 
     if (alert.created_at) {
@@ -158,8 +158,8 @@ export class ExternalCommunicationService {
       }
 
       // Send photo if available
-      if (alert.media_url) {
-        await this.sendTelegramPhoto(alert.media_url, alert.type);
+      if (alert.evidence_url) {
+        await this.sendTelegramPhoto(alert.evidence_url, alert.type);
       }
 
       this.lastShared.set({ platform: 'telegram', alert });

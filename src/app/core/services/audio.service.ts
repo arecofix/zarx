@@ -1,10 +1,12 @@
 import { Injectable, signal } from '@angular/core';
+import { AppConstants } from '../constants/app.constants';
 
 @Injectable({
   providedIn: 'root'
 })
 export class AudioService {
   private sirenAudio: HTMLAudioElement | null = null;
+  private urgentSirenAudio: HTMLAudioElement | null = null; // New
   private beepAudio: HTMLAudioElement | null = null;
   
   // Signals
@@ -18,15 +20,18 @@ export class AudioService {
   private initAudio() {
     if (typeof Audio !== 'undefined') {
       try {
-        this.sirenAudio = new Audio('/assets/sounds/siren.mp3?v=1');
-        this.beepAudio = new Audio('/assets/sounds/beep.alert.mp3?v=1');
+        this.sirenAudio = new Audio(AppConstants.ASSETS.AUDIO.SIREN);
+        this.urgentSirenAudio = new Audio(AppConstants.ASSETS.AUDIO.URGENT_SIREN);
+        this.beepAudio = new Audio(AppConstants.ASSETS.AUDIO.ALERT_BEEP);
         
         // Preload
         this.sirenAudio.load();
+        this.urgentSirenAudio.load();
         this.beepAudio.load();
         
         // Set volume
         this.sirenAudio.volume = 0.7;
+        this.urgentSirenAudio.volume = 1.0; // Max volume for urgent
         this.beepAudio.volume = 0.5;
       } catch (error) {
         console.warn('Audio initialization failed:', error);
@@ -98,12 +103,37 @@ export class AudioService {
   }
 
   /**
-   * Stop siren sound
+   * Play urgent siren sound for critical alerts
+   */
+  playUrgentSiren(): Promise<void> {
+    if (!this.audioEnabled() || !this.urgentSirenAudio) {
+      console.warn('Audio not enabled or not initialized');
+      return Promise.resolve();
+    }
+
+    this.stopSiren(); // Stop other sounds
+    this.urgentSirenAudio.currentTime = 0;
+    
+    return this.urgentSirenAudio.play()
+      .then(() => {
+        console.log('🚨 URGENT Siren playing');
+      })
+      .catch((error) => {
+        console.error('Error playing urgent siren:', error);
+      });
+  }
+
+  /**
+   * Stop all sirens
    */
   stopSiren() {
     if (this.sirenAudio) {
       this.sirenAudio.pause();
       this.sirenAudio.currentTime = 0;
+    }
+    if (this.urgentSirenAudio) {
+      this.urgentSirenAudio.pause();
+      this.urgentSirenAudio.currentTime = 0;
     }
   }
 

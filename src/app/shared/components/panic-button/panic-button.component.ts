@@ -6,6 +6,8 @@ import { Haptics, ImpactStyle, NotificationType } from '@capacitor/haptics';
 import { Camera } from '@capacitor/camera';
 import { Capacitor } from '@capacitor/core';
 import { ToastService } from '../../../core/services/toast.service';
+import { AppConstants } from '../../../core/constants/app.constants';
+import { SosService } from '../../../core/services/sos.service';
 
 @Component({
   selector: 'app-panic-button',
@@ -102,6 +104,7 @@ import { ToastService } from '../../../core/services/toast.service';
 export class PanicButtonComponent implements OnDestroy {
   reportService = inject(ReportService);
   toastService = inject(ToastService);
+  sosService = inject(SosService);
 
   isPressed = signal(false);
   isTriggering = signal(false);
@@ -183,12 +186,11 @@ export class PanicButtonComponent implements OnDestroy {
            this.playLocalSiren();
         }
 
-        // 3. Send Report to Backend
-        // Note: ReportService should handle location attachment automatically
-        await this.reportService.createReport(
-            ReportType.SOS,
-            this.silentMode() ? 'SOS SILENCIOSO - ASISTENCIA REQUERIDA' : 'SOS ACTIVO - ALARMA SONORA'
-        );
+        // 3. Send Report to Backend (Robust Retry Policy)
+        // Uses the new SosUseCase internally
+        const success = await this.sosService.triggerSos();
+        
+        if (!success) throw new Error('Failed to deliver SOS');
 
         this.hasUsedPanic.set(true);
         this.toastService.success('🚨 PROTOCOLO SOS INICIADO');
@@ -249,7 +251,7 @@ export class PanicButtonComponent implements OnDestroy {
   }
 
   playLocalSiren() {
-     const audio = new Audio('assets/sounds/siren.mp3'); // Ensure this file exists!
+     const audio = new Audio(AppConstants.ASSETS.AUDIO.SIREN);
      audio.loop = true;
      audio.play().catch(e => console.warn('Audio play failed', e));
      

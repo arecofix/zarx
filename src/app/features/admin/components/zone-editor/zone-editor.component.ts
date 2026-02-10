@@ -10,94 +10,131 @@ import { ZoneService, Zone } from '../../services/zone.service';
   standalone: true,
   imports: [CommonModule, FormsModule],
   template: `
-    <div class="flex h-screen bg-slate-900">
+    <div class="relative w-screen h-screen bg-slate-950 overflow-hidden flex">
       
+      <!-- TOGGLE SIDEBAR BUTTON (Mobile Only) -->
+      <button *ngIf="!sidebarOpen()" (click)="toggleSidebar()" 
+              class="absolute top-4 left-4 z-30 p-2 bg-slate-900/80 backdrop-blur rounded-lg border border-slate-700 text-white shadow-lg md:hidden">
+         <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+
       <!-- SIDEBAR -->
-      <div class="w-80 bg-slate-900 border-r border-slate-700 p-4 flex flex-col">
-        <h2 class="text-xl font-bold text-white mb-6 flex items-center gap-2">
-           <span>🛡️</span> Control Territorial
-        </h2>
+      <div class="absolute inset-y-0 left-0 z-40 w-full sm:w-80 bg-slate-900/95 backdrop-blur border-r border-slate-700 p-4 flex flex-col transition-transform duration-300 md:relative md:translate-x-0"
+           [class.-translate-x-full]="!sidebarOpen()">
+        
+        <div class="flex justify-between items-center mb-6">
+           <h2 class="text-xl font-bold text-white flex items-center gap-2">
+              <span>🛡️</span> Control Territorial
+           </h2>
+           <!-- Close Sidebar (Mobile) -->
+           <button (click)="toggleSidebar()" class="md:hidden text-slate-400 hover:text-white">
+              <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+           </button>
+        </div>
 
         <!-- Zones List -->
-        <div class="flex-1 overflow-y-auto space-y-2">
-           <div *ngFor="let zone of zones()" class="p-3 bg-slate-800 rounded-lg border border-slate-700 hover:bg-slate-700 transition-colors group">
-              <div class="flex justifying-between items-start mb-1">
-                 <h3 class="font-bold text-white">{{ zone.name }}</h3>
-                 <span class="text-[10px] px-2 py-0.5 rounded font-bold"
+        <div class="flex-1 overflow-y-auto space-y-2 pr-1">
+           <div *ngFor="let zone of zones()" class="p-3 bg-slate-800 rounded-lg border border-slate-700 hover:bg-slate-750 transition-colors group relative">
+              <div class="flex justify-between items-start mb-1">
+                 <h3 class="font-bold text-white text-sm truncate pr-2">{{ zone.name }}</h3>
+                 <span class="text-[10px] px-2 py-0.5 rounded font-bold whitespace-nowrap"
                        [class.bg-emerald-500]="zone.type === 'SAFE'"
                        [class.text-emerald-950]="zone.type === 'SAFE'"
                        [class.bg-red-500]="zone.type === 'DANGER'"
-                       [class.text-white]="zone.type === 'DANGER'">
+                       [class.text-white]="zone.type === 'DANGER'"
+                       [class.bg-slate-500]="zone.type === 'BLOCKED'"
+                       [class.text-white]="zone.type === 'BLOCKED'"
+                       [class.bg-blue-500]="zone.type === 'COMMERCIAL'"
+                       [class.text-white]="zone.type === 'COMMERCIAL'">
                     {{ zone.type }}
                  </span>
               </div>
               <div class="flex justify-between items-center text-xs text-slate-400">
                  <span>Riesgo: {{ zone.risk_level }}</span>
-                 <button class="text-red-400 hover:text-red-300 opacity-0 group-hover:opacity-100 transition-opacity">Borrar</button>
+                 <button (click)="deleteZone(zone)" class="text-red-400 hover:text-red-300 transition-opacity font-bold uppercase text-[10px]">
+                    🗑️ Borrar
+                 </button>
               </div>
+           </div>
+           
+           <div *ngIf="zones().length === 0" class="text-center py-8 text-slate-500 italic text-sm">
+              No hay zonas registradas. <br>
+              Usa las herramientas de dibujo en el mapa.
            </div>
         </div>
 
         <div class="mt-4 pt-4 border-t border-slate-700">
-           <button (click)="goToDashboard()" class="w-full py-3 bg-slate-800 text-slate-400 rounded-lg hover:bg-slate-700 hover:text-white transition-colors">
-              Volver al Panel
+           <button (click)="goToDashboard()" class="w-full py-3 bg-slate-800 text-slate-300 rounded-lg hover:bg-slate-700 hover:text-white transition-colors font-bold text-sm tracking-wide uppercase border border-slate-600">
+              ⬅ Volver al Panel
            </button>
         </div>
       </div>
 
       <!-- MAP AREA -->
-      <div class="flex-1 relative">
-         <div id="zoneMap" class="w-full h-full z-10"></div>
+      <div class="flex-1 relative z-0">
+         <div id="zoneMap" class="w-full h-full z-0"></div>
          
          <!-- Loading Overlay -->
          <div *ngIf="isLoading()" class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center">
-            <div class="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+            <div class="flex flex-col items-center gap-4">
+               <div class="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+               <span class="text-white font-mono text-xs animate-pulse">PROCESANDO DATOS GEOESPACIALES...</span>
+            </div>
          </div>
       </div>
 
       <!-- NEW ZONE MODAL -->
-      <div *ngIf="showModal()" class="fixed inset-0 z-1000 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-         <div class="bg-slate-800 rounded-xl max-w-md w-full p-6 border border-slate-700 animate-scale-up">
-            <h3 class="text-xl font-bold text-white mb-4">Nueva Zona Identificada</h3>
+      <div *ngIf="showModal()" class="fixed inset-0 z-100 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+         <div class="bg-slate-900 rounded-xl max-w-sm w-full p-6 border border-slate-600 shadow-2xl relative">
+            <h3 class="text-lg font-black text-white mb-4 tracking-wide uppercase border-b border-slate-700 pb-2">
+               Nueva Zona Táctica
+            </h3>
             
             <div class="space-y-4">
                <div>
-                  <label class="block text-xs font-bold text-slate-400 mb-1">NOMBRE DE LA ZONA</label>
-                  <input [(ngModel)]="newZone.name" type="text" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-white focus:border-emerald-500 outline-none">
+                  <label class="block text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Nombre de Zona</label>
+                  <input [(ngModel)]="newZone.name" placeholder="Ej: Zona Norte Segura" type="text" class="w-full bg-black border border-slate-700 rounded p-3 text-white text-sm focus:border-emerald-500 outline-none placeholder:text-slate-600 transition-colors">
                </div>
 
                <div>
-                  <label class="block text-xs font-bold text-slate-400 mb-1">TIPO DE ZONA</label>
+                  <label class="block text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Clasificación</label>
                   <div class="grid grid-cols-2 gap-2">
                      <button (click)="newZone.type = 'SAFE'" 
-                             class="p-3 rounded-lg border text-sm font-bold transition-all"
-                             [class.bg-emerald-500]="newZone.type === 'SAFE'"
+                             class="p-2 rounded border text-xs font-bold transition-all flex items-center justify-center gap-1"
+                             [class.bg-emerald-600]="newZone.type === 'SAFE'"
                              [class.border-emerald-500]="newZone.type === 'SAFE'"
-                             [class.bg-slate-900]="newZone.type !== 'SAFE'"
+                             [class.text-white]="newZone.type === 'SAFE'"
+                             [class.bg-slate-800]="newZone.type !== 'SAFE'"
+                             [class.text-slate-400]="newZone.type !== 'SAFE'"
                              [class.border-slate-700]="newZone.type !== 'SAFE'">
-                        🛡️ ZONA SEGURA
+                        🛡️ SEGURA
                      </button>
                      <button (click)="newZone.type = 'DANGER'" 
-                             class="p-3 rounded-lg border text-sm font-bold transition-all"
-                             [class.bg-red-500]="newZone.type === 'DANGER'"
+                             class="p-2 rounded border text-xs font-bold transition-all flex items-center justify-center gap-1"
+                             [class.bg-red-600]="newZone.type === 'DANGER'"
                              [class.border-red-500]="newZone.type === 'DANGER'"
-                             [class.bg-slate-900]="newZone.type !== 'DANGER'"
+                             [class.text-white]="newZone.type === 'DANGER'"
+                             [class.bg-slate-800]="newZone.type !== 'DANGER'"
+                             [class.text-slate-400]="newZone.type !== 'DANGER'"
                              [class.border-slate-700]="newZone.type !== 'DANGER'">
-                        ⚠️ ZONA ROJA
+                        ⚠️ PELIGRO
                      </button>
                   </div>
                </div>
 
                <div>
-                  <label class="block text-xs font-bold text-slate-400 mb-1">NIVEL DE RIESGO (0-10)</label>
-                  <input [(ngModel)]="newZone.risk_level" type="range" min="0" max="10" class="w-full accent-emerald-500">
-                  <div class="text-center font-bold text-2xl text-white">{{ newZone.risk_level }}</div>
+                  <label class="block text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Nivel de Riesgo: {{ newZone.risk_level }}</label>
+                  <input [(ngModel)]="newZone.risk_level" type="range" min="1" max="10" class="w-full accent-emerald-500 h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer">
+                  <div class="flex justify-between text-[10px] text-slate-500 mt-1 font-mono">
+                     <span>BAJO</span>
+                     <span>ALTO</span>
+                  </div>
                </div>
             </div>
 
-            <div class="flex gap-3 mt-6">
-               <button (click)="cancelCreate()" class="flex-1 py-3 bg-slate-700 text-white rounded-lg font-bold">CANCELAR</button>
-               <button (click)="saveZone()" class="flex-1 py-3 bg-emerald-600 text-white rounded-lg font-bold">CONFIRMAR ZONA</button>
+            <div class="flex gap-3 mt-6 pt-4 border-t border-slate-700">
+               <button (click)="cancelCreate()" class="flex-1 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded font-bold text-xs uppercase transition-colors">Cancelar</button>
+               <button (click)="saveZone()" class="flex-1 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded font-bold text-xs uppercase shadow-lg shadow-emerald-900/20 transition-all">Guardar Zona</button>
             </div>
          </div>
       </div>
@@ -137,8 +174,29 @@ export class ZoneEditorComponent implements OnInit, OnDestroy {
     risk_level: 1
   };
 
+  sidebarOpen = signal(true);
+
   goToDashboard() {
     this.router.navigate(['/admin/dashboard']);
+  }
+
+  toggleSidebar() {
+    this.sidebarOpen.update(v => !v);
+  }
+
+  async deleteZone(zone: any) {
+    if(!confirm(`¿Eliminar zona "${zone.name}"?`)) return;
+    
+    this.isLoading.set(true);
+    const { error } = await this.zoneService.deleteZone(zone.id);
+
+    if (error) {
+       this.isLoading.set(false);
+       alert('Error al eliminar zona: ' + error.message);
+    } else {
+       await this.loadZones();
+       this.isLoading.set(false);
+    }
   }
 
   async ngOnInit() {
@@ -236,24 +294,14 @@ export class ZoneEditorComponent implements OnInit, OnDestroy {
         let layerToSave = this.currentLayer;
 
         // CONVERT CIRCLE TO POLYGON (Proxy Strategy)
-        // PostGIS 'polygon' type doesn't support circles natively unless we use GeometryCollection or buffer.
-        // For compatibility with 'zones' table geometry(Polygon), we convert circle to a 64-vertex polygon.
         if (typeof this.currentLayer.getRadius === 'function') {
              const center = this.currentLayer.getLatLng();
              const radius = this.currentLayer.getRadius();
              
-             // Create a polygon approximating the circle
-             // We can use a utility or just create a circle-marker styled polygon, 
-             // but visually simpler is to let the service handle GEOJSON conversion or do it here.
-             // Leaflet 'toGeoJSON()' on a circle returns a Point with "radius" property sometimes or just a point.
-             // It's safer to generate the polygon points manually or use a simple hack:
-             // Use a library or approximate. 
-             // Approximation: Use Turf or simple math. Let's do simple math for dependency-free speed.
              const points = [];
              for (let i = 0; i < 64; i++) {
                  const angle = (i * 360 / 64) * Math.PI / 180;
                  // 1 degree lat ~= 111km. 1 degree lng ~= 111km * cos(lat).
-                 // This is rough estimation but good enough for UI zones (meters).
                  const dLat = (radius / 111320) * Math.cos(angle);
                  const dLng = (radius / (111320 * Math.cos(center.lat * Math.PI / 180))) * Math.sin(angle);
                  points.push([center.lat + dLat, center.lng + dLng]);
@@ -261,11 +309,15 @@ export class ZoneEditorComponent implements OnInit, OnDestroy {
              layerToSave = L.polygon(points as any);
         }
 
-        await this.zoneService.saveZone(layerToSave, {
+        const { error } = await this.zoneService.saveZone(layerToSave, {
             name: this.newZone.name,
             type: this.newZone.type,
             risk_level: this.newZone.risk_level
         });
+
+        if (error) {
+            throw error;
+        }
 
         // Reset form
         this.showModal.set(false);
@@ -276,9 +328,9 @@ export class ZoneEditorComponent implements OnInit, OnDestroy {
         this.drawnItems.clearLayers();
         await this.loadZones();
 
-    } catch (e) {
+    } catch (e: any) {
         console.error('Error saving zone', e);
-        alert('Error al guardar zona');
+        alert('Error al guardar zona: ' + (e.message || e));
     } finally {
         this.isLoading.set(false);
     }

@@ -15,17 +15,13 @@ import { AlertService } from '../../core/services/alert.service';
 import { LocationService } from '../../core/services/location.service';
 import { ToastService } from '../../core/services/toast.service';
 import { ReportType } from '../../core/models';
-import { REPORT_STRATEGIES } from '../../core/config/report.config';
-import { CameraService } from '../../core/services/camera.service';
 import { ReportService } from '../../core/services/report.service';
-import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
-import { FormsModule } from '@angular/forms';
 import { PwaService } from '../../core/services/pwa.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { PanicButtonComponent } from '../../shared/components/panic-button/panic-button.component';
 import { NewsService } from '../../core/services/news.service';
 import { NearbyAlertNotificationComponent } from './components/nearby-alert-notification/nearby-alert-notification.component';
-import { SosService } from '../../core/services/sos.service';
+import { ReportWizardComponent } from './components/report-wizard/report-wizard.component';
 
 @Component({
   selector: 'app-home',
@@ -40,8 +36,8 @@ import { SosService } from '../../core/services/sos.service';
     ToastNotificationComponent,
     PanicButtonComponent,
     OnboardingComponent,
-    FormsModule,
-    NearbyAlertNotificationComponent
+    NearbyAlertNotificationComponent,
+    ReportWizardComponent
   ],
   template: `
     <div class="relative w-screen h-screen overflow-hidden bg-slate-950 font-sans select-none">
@@ -249,7 +245,7 @@ import { SosService } from '../../core/services/sos.service';
       
       @if (showReportMenu()) {
         <app-reports-menu 
-           [isLoading]="alertService.isSending()"
+           [isLoading]="reportService.isSending()"
            (selectReport)="onReportSelected($event)" 
            (closeMenu)="showReportMenu.set(false)">
         </app-reports-menu>
@@ -257,66 +253,11 @@ import { SosService } from '../../core/services/sos.service';
 
       <!-- REPORT WIZARD OVERLAY (Z-50) -->
       @if (selectedReportType()) {
-        <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/90 backdrop-blur p-6 animate-fade-in">
-           <div class="w-full max-w-sm bg-slate-900 border border-slate-700 rounded-2xl p-6 shadow-2xl relative animate-slide-up">
-              
-              <h3 class="text-xl text-white font-bold mb-4 flex items-center gap-2">
-                <span>📝</span> Detalles del Reporte
-              </h3>
-
-              <!-- Description -->
-              <div class="mb-4">
-                <label for="reportDescription" class="text-slate-400 text-xs uppercase tracking-wider font-bold">Descripción (Opcional)</label>
-                <textarea 
-                  id="reportDescription"
-                  name="reportDescription"
-                  [ngModel]="reportDescription()"
-                  (ngModelChange)="reportDescription.set($event)"
-                  class="w-full mt-2 bg-slate-800 text-white rounded-lg p-3 border border-slate-700 focus:border-emerald-500 outline-none resize-none h-24 text-sm"
-                  placeholder="Ej: Auto gris mal estacionado..."
-                ></textarea>
-              </div>
-
-              <!-- Evidence Preview -->
-              @if (reportEvidencePreview()) {
-                 <div class="mb-4 relative rounded-lg overflow-hidden border border-slate-600 aspect-video group bg-black">
-                    <img [src]="reportEvidencePreview()" class="w-full h-full object-contain" />
-                    <button (click)="clearEvidence()" class="absolute top-2 right-2 bg-red-600 text-white p-1 rounded-full shadow-lg hover:bg-red-500">
-                       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                    </button>
-                 </div>
-              }
-
-              <!-- Buttons Grid -->
-              <div class="grid grid-cols-2 gap-3 mb-2">
-                 <!-- Camera Button -->
-                 <button (click)="captureEvidence()" class="p-3 rounded-xl border border-dashed border-slate-600 text-slate-400 hover:text-white hover:border-emerald-500 hover:bg-slate-800 transition-all flex flex-col items-center justify-center gap-1">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-                    <span class="text-xs font-bold">
-                      FOTO {{ isPhotoRequired() ? '(Obligatoria)' : '(Opcional)' }}
-                    </span>
-                 </button>
-              </div>
-
-              <!-- Actions -->
-              <div class="flex items-center gap-3 mt-6">
-                 <button (click)="cancelReport()" class="flex-1 py-3 bg-slate-800 text-slate-300 rounded-xl font-bold hover:bg-slate-700 transition-colors">
-                    Cancelar
-                 </button>
-                 <button 
-                    (click)="confirmReport()" 
-                    [disabled]="reportService.isUploading() || (isPhotoRequired() && !reportEvidenceBlob())" 
-                    class="flex-1 py-3 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-all shadow-lg shadow-emerald-900/20"
-                 >
-                    @if (reportService.isUploading()) {
-                       <div class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                    }
-                    {{ reportService.isUploading() ? 'Enviando...' : 'Enviar Reporte' }}
-                 </button>
-              </div>
-
-           </div>
-        </div>
+        <app-report-wizard 
+           [type]="selectedReportType()!" 
+           (close)="selectedReportType.set(null)"
+           (success)="onReportSuccess()">
+        </app-report-wizard>
       }
 
       <!-- LAYER 0: MAP (Z-0) -->
@@ -338,18 +279,13 @@ import { SosService } from '../../core/services/sos.service';
     @keyframes slideInLeft { from { transform: translateX(-100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
     .animate-fade-in-down { animation: fadeInDown 0.2s ease-out; }
     @keyframes fadeInDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
-    .animate-slide-up { animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
-    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
   `]
 })
 export class HomeComponent implements OnInit {
   private authService = inject(AuthService);
-  public alertService = inject(AlertService); 
   public reportService = inject(ReportService);
-  private cameraService = inject(CameraService);
   private locationService = inject(LocationService);
   private toastService = inject(ToastService);
-  private sanitizer = inject(DomSanitizer);
   private router = inject(Router);
   public pwaService = inject(PwaService);
   public notificationService = inject(NotificationService);
@@ -369,16 +305,6 @@ export class HomeComponent implements OnInit {
   
   // Report Wizard Signals
   selectedReportType = signal<ReportType | null>(null);
-  reportDescription = signal('');
-  reportEvidenceBlob = signal<Blob | null>(null);
-  reportEvidencePreview = signal<SafeUrl | null>(null);
-  
-  // Computed or Helper
-  isPhotoRequired() {
-     const type = this.selectedReportType();
-     if (!type) return false;
-     return REPORT_STRATEGIES[type]?.requiresPhoto ?? false;
-  }
   
   // Dummy Data - Now populated by NewsService
   userScore = signal(850);
@@ -392,11 +318,6 @@ export class HomeComponent implements OnInit {
   }
 
   newsItems = signal<NewsItem[]>([]);
-
-  // SOS Logic (Hold to Panic)
-  isSosPressed = signal(false);
-  private sosTimeout: any;
-  private longPressTriggered = false;
 
   constructor(@Inject(PLATFORM_ID) private platformId: Object) {}
   
@@ -564,41 +485,7 @@ export class HomeComponent implements OnInit {
     }
   }
 
-  // --- SOS Logic ---
-
-  onSosClick() {
-    // If long press was triggered, ignore the click (mouseup usually triggers click too)
-    if (this.longPressTriggered) {
-      this.longPressTriggered = false;
-      return;
-    }
-    this.showReportMenu.set(true);
-  }
-
-  startSosPress() {
-    if (this.showReportMenu()) return; // Don't press underneath menu
-    this.isSosPressed.set(true);
-    this.longPressTriggered = false;
-    
-    this.sosTimeout = setTimeout(() => {
-      this.longPressTriggered = true; // Mark as handled by long press
-      this.triggerPanicDirect(); // Direct Panic
-    }, 1500); // 1.5s hold for panic
-  }
-
-  endSosPress() {
-    if (this.isSosPressed()) {
-      this.isSosPressed.set(false);
-      clearTimeout(this.sosTimeout);
-    }
-  }
-  async triggerPanicDirect() {
-    // Direct panic from hold
-    console.log('🚨 DIRECT PANIC TRIGGERED 🚨');
-    this.toastService.warning("ACTIVANDO PÁNICO...", 1000);
-    // Use ReportService
-    await this.reportService.createReport(ReportType.SOS, "Pánico activado por botón SOS (Hold)");
-  }
+  // --- Report Flow ---
 
   async onReportSelected(type: ReportType) {
     if (type === ReportType.SOS) {
@@ -623,50 +510,12 @@ export class HomeComponent implements OnInit {
        // Open Wizard for other types
        this.showReportMenu.set(false);
        this.selectedReportType.set(type);
-       this.reportDescription.set('');
-       this.clearEvidence();
     }
   }
 
-  async captureEvidence() {
-    const photo = await this.cameraService.capturePhoto();
-    if (photo) {
-      // Convert data URL to blob
-      const response = await fetch(photo.dataUrl);
-      const blob = await response.blob();
-      
-      this.reportEvidenceBlob.set(blob);
-
-      // Sanitize Blob URL NOT Data URL when possible
-      const objectUrl = URL.createObjectURL(blob);
-      this.reportEvidencePreview.set(this.sanitizer.bypassSecurityTrustUrl(objectUrl));
-    }
-  }
-
-  clearEvidence() {
-    this.reportEvidenceBlob.set(null);
-    this.reportEvidencePreview.set(null);
-  }
-
-  cancelReport() {
+  onReportSuccess() {
     this.selectedReportType.set(null);
-    this.clearEvidence();
-  }
-
-  async confirmReport() {
-    const type = this.selectedReportType();
-    if (!type) return;
-
-    const desc = this.reportDescription();
-    const evidence = this.reportEvidenceBlob();
-
-    const success = await this.reportService.createReport(type, desc, evidence);
-    
-    if (success) {
-      this.selectedReportType.set(null);
-      this.clearEvidence();
-      this.loadNews(); // Refresh news with new report
-    }
+    this.loadNews();
   }
 
   openManualLocation() {

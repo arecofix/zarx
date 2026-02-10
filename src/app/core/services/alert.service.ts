@@ -6,10 +6,14 @@ import { Alert, ReportType } from '../models';
 import { Haptics, NotificationType } from '@capacitor/haptics';
 import { AppConstants } from '../constants/app.constants';
 import { ToastService } from './toast.service';
+import { RealtimeChannel } from '@supabase/supabase-js';
 
 @Injectable({
   providedIn: 'root'
 })
+/**
+ * @deprecated Use ReportService instead. This service will be removed in future versions.
+ */
 export class AlertService {
   private supabase = inject(SupabaseService).client;
   private auth = inject(AuthService);
@@ -24,6 +28,7 @@ export class AlertService {
   // Audio for Siren
   private sirenAudio: HTMLAudioElement | null = null;
   private urgentSirenAudio: HTMLAudioElement | null = null;
+  private adminChannel: RealtimeChannel | null = null;
 
   constructor() {
     this.initAudio();
@@ -67,22 +72,27 @@ export class AlertService {
       const { latitude, longitude } = pos.coords;
 
       // 2. Determine Priority
+      // 2. Determine Priority
       let priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' = 'MEDIUM';
-      if (type === ReportType.SOS || type === ReportType.RIESGO_VIDA) priority = 'CRITICAL';
-      if (type === ReportType.ROBO || type === ReportType.DELITO_PROCESO || type === ReportType.ACTIVIDAD_DELICTIVA) priority = 'CRITICAL';
-      if (type === ReportType.INCENDIO || type === ReportType.EMERGENCIA_MEDICA || type === ReportType.ACCIDENTE) priority = 'HIGH';
-      if (type === ReportType.ACTIVIDAD_SOSPECHOSA || type === ReportType.VANDALISMO) priority = 'MEDIUM';
-      if (type === ReportType.CORTE_DE_LUZ || type === ReportType.LUMINARIA_ROTA || type === ReportType.BACHE || type === ReportType.BASURA || type === ReportType.PELIGRO_VIAL || type === ReportType.PELIGRO_VIAL_OBSTRUCCION) priority = 'LOW';
+      
+      const CRITICAL_TYPES = [ReportType.SOS, ReportType.RIESGO_VIDA, ReportType.ROBO, ReportType.DELITO_PROCESO, ReportType.ACTIVIDAD_DELICTIVA];
+      const HIGH_TYPES = [ReportType.INCENDIO, ReportType.EMERGENCIA_MEDICA, ReportType.ACCIDENTE];
+      const LOW_TYPES = [
+         ReportType.CORTE_DE_LUZ, ReportType.LUMINARIA_ROTA, ReportType.BACHE, 
+         ReportType.BASURA, ReportType.PELIGRO_VIAL, ReportType.PELIGRO_VIAL_OBSTRUCCION
+      ];
+
+      if (CRITICAL_TYPES.includes(type)) priority = 'CRITICAL';
+      else if (HIGH_TYPES.includes(type)) priority = 'HIGH';
+      else if (LOW_TYPES.includes(type)) priority = 'LOW';
 
       // 3. Insert Alert
       const alertPayload = {
         user_id: user.id,
         type: type,
         priority: priority,
-        status: 'PENDING',
+        status: AppConstants.CONFIG.STATUS.PENDING,
         location: `POINT(${longitude} ${latitude})`,
-        latitude: latitude,
-        longitude: longitude,
         description: description || `Reporte de ${type}`,
         evidence_url: evidenceUrl
       };
@@ -158,18 +168,18 @@ export class AlertService {
     let type: 'info' | 'success' | 'warning' | 'error' = 'info';
 
     switch (status) {
-      case 'VALIDATED':
-      case 'VERIFIED':
+      case AppConstants.CONFIG.STATUS.VALIDATED:
+      case AppConstants.CONFIG.STATUS.VERIFIED:
         title = '✅ Reporte Verificado';
         message = 'Tu reporte ha sido verificado por las autoridades.';
         type = 'success';
         break;
-      case 'FALSE_ALARM':
+      case AppConstants.CONFIG.STATUS.FALSE_ALARM:
         title = '⚠️ Falsa Alarma';
         message = 'Tu reporte ha sido marcado como falsa alarma.';
         type = 'warning';
         break;
-      case 'RESOLVED':
+      case AppConstants.CONFIG.STATUS.RESOLVED:
         title = '🎉 Caso Cerrado';
         message = 'La situación ha sido resuelta.';
         type = 'success';
@@ -189,8 +199,11 @@ export class AlertService {
    * REALTIME MONITORING (Admin)
    */
   startMonitoring() {
-    this.supabase
-      .channel('admin-alerts')
+    if (this.adminChannel) return;
+
+    this.adminChannel = this.supabase.channel('admin-alerts');
+    
+    this.adminChannel
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'reports' },
@@ -206,14 +219,23 @@ export class AlertService {
   }
 
   stopMonitoring() {
-    this.supabase.removeChannel(this.supabase.channel('admin-alerts'));
+    if (this.adminChannel) {
+      this.supabase.removeChannel(this.adminChannel);
+      this.adminChannel = null;
+    }
   }
 
   private async fetchActiveAlerts() {
     const { data } = await this.supabase
       .from('reports')
       .select('*, profiles:user_id(id, full_name, avatar_url, phone, username, role)')
-      .in('status', ['PENDING', 'VALIDATED', 'VERIFIED', 'ENGAGED', 'OPEN'])
+      .in('status', [
+         AppConstants.CONFIG.STATUS.PENDING, 
+         AppConstants.CONFIG.STATUS.VALIDATED, 
+         AppConstants.CONFIG.STATUS.VERIFIED, 
+         AppConstants.CONFIG.STATUS.ENGAGED, 
+         AppConstants.CONFIG.STATUS.OPEN
+      ])
       .order('created_at', { ascending: false });
       
     if (data) {

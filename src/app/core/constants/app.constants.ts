@@ -1,5 +1,41 @@
 export const AppConstants = {
   APP_NAME: 'ZARX SYSTEM',
+
+  // System Configuration
+  CONFIG: {
+    LOCATION: {
+      TIMEOUT_HIGH_ACCURACY: 30000,
+      TIMEOUT_LOW_ACCURACY: 45000,
+      MAX_AGE_HIGH: 10000,
+      MAX_AGE_LOW: 120000,
+      CACHE_VALIDITY: 60000,
+      DEFAULT_LAT: -34.7709,
+      DEFAULT_LNG: -58.8335
+    },
+    STORAGE: {
+      BUCKET_EVIDENCE: 'evidence'
+    },
+    EMERGENCY: {
+      BROADCAST_DISTANCE_METERS: 500,
+      TRACKING_INTERVAL_MS: 5000,
+      NEARBY_THRESHOLD: 500
+    },
+    ROLES: {
+      ADMIN: 'admin',
+      RESPONDER: 'responder',
+      CIVILIAN: 'civilian',
+      MILITARY: 'military'
+    },
+    STATUS: {
+      PENDING: 'PENDING',
+      VALIDATED: 'VALIDATED',
+      VERIFIED: 'VERIFIED',
+      FALSE_ALARM: 'FALSE_ALARM',
+      RESOLVED: 'RESOLVED',
+      OPEN: 'OPEN',
+      ENGAGED: 'ENGAGED'
+    }
+  },
   
   // Emergency Numbers (Argentina)
   EMERGENCY: {

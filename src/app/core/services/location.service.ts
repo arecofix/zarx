@@ -3,13 +3,9 @@ import { isPlatformBrowser } from '@angular/common';
 import { Geolocation, Position, GeolocationOptions } from '@capacitor/geolocation';
 import { Capacitor } from '@capacitor/core';
 
-const GPS_TIMEOUTS = {
-  HIGH_ACCURACY: 30000,   // 30s - More time for GPS lock
-  LOW_ACCURACY: 45000,    // 45s - Maximum fallback time
-  MAX_AGE_HIGH: 10000,    // Accept 10s old high acc data
-  MAX_AGE_LOW: 120000,    // Accept 2min old low acc data
-  CACHE_VALIDITY: 60000   // Accept 60s old cache
-};
+import { AppConstants } from '../constants/app.constants';
+
+const C = AppConstants.CONFIG.LOCATION;
 
 @Injectable({
   providedIn: 'root'
@@ -32,8 +28,8 @@ export class LocationService {
     if (!isPlatformBrowser(this.platformId)) return null;
 
     // 1. Check Cache
+    // 1. Check Cache
     if (this.isCacheValid()) {
-        console.log('📍 Using Cached Location');
         return this.lastPosition;
     }
 
@@ -77,13 +73,11 @@ export class LocationService {
   // --- Strategies ---
 
   private async tryWebHighAccuracy(): Promise<Position | null> {
-    console.info('📍 Iniciando adquisición de ubicación (Alta Precisión)...');
-    return this.getWebPosition(true, GPS_TIMEOUTS.HIGH_ACCURACY, GPS_TIMEOUTS.MAX_AGE_HIGH);
+    return this.getWebPosition(true, C.TIMEOUT_HIGH_ACCURACY, C.MAX_AGE_HIGH);
   }
 
   private async tryWebLowAccuracy(): Promise<Position | null> {
-    console.info('📍 Reintentando con precisión estándar...');
-    return this.getWebPosition(false, GPS_TIMEOUTS.LOW_ACCURACY, GPS_TIMEOUTS.MAX_AGE_LOW);
+    return this.getWebPosition(false, C.TIMEOUT_LOW_ACCURACY, C.MAX_AGE_LOW);
   }
 
   private async tryCapacitorNative(): Promise<Position | null> {
@@ -91,16 +85,16 @@ export class LocationService {
     try {
         return await Geolocation.getCurrentPosition({
             enableHighAccuracy: true, 
-            timeout: 30000, 
-            maximumAge: GPS_TIMEOUTS.MAX_AGE_LOW 
+            timeout: C.TIMEOUT_HIGH_ACCURACY, 
+            maximumAge: C.MAX_AGE_LOW 
         });
     } catch (err: any) {
-         console.warn('Capacitor Geo failed:', err.message);
+         console.warn('Capacitor Geo High Accuracy failed, trying low accuracy');
          // Fallback: Low accuracy native
          try {
             return await Geolocation.getCurrentPosition({
                 enableHighAccuracy: false,
-                timeout: 20000,
+                timeout: C.TIMEOUT_LOW_ACCURACY,
                 maximumAge: Infinity
             });
          } catch(e) { return null; }
@@ -110,11 +104,10 @@ export class LocationService {
   // --- Helpers ---
 
   private isCacheValid(): boolean {
-    return !!(this.lastPosition && (Date.now() - this.lastPosition.timestamp < GPS_TIMEOUTS.CACHE_VALIDITY));
+    return !!(this.lastPosition && (Date.now() - this.lastPosition.timestamp < C.CACHE_VALIDITY));
   }
 
   private cachePosition(pos: Position) {
-    console.log('✅ Location acquired:', pos.coords.latitude, pos.coords.longitude);
     this.lastPosition = pos;
     this.currentPosition.set(pos);
   }
@@ -165,18 +158,18 @@ export class LocationService {
 
   private getDevFallback(): Position {
        console.info('ℹ️ Modo Desarrollo: Utilizando ubicación simulada (Falla de GPS)');
-       return {
-           timestamp: Date.now(),
-           coords: {
-               latitude: -34.7709,
-               longitude: -58.8335,
-               accuracy: 50,
-               altitude: 20,
-               altitudeAccuracy: 10,
-               heading: 0,
-               speed: 0
-           }
-       };
+        return {
+            timestamp: Date.now(),
+            coords: {
+                latitude: C.DEFAULT_LAT,
+                longitude: C.DEFAULT_LNG,
+                accuracy: 50,
+                altitude: 20,
+                altitudeAccuracy: 10,
+                heading: 0,
+                speed: 0
+            }
+        };
   }
 
   // --- Tracking ---
@@ -189,7 +182,7 @@ export class LocationService {
 
       this.watchId = await Geolocation.watchPosition({
         enableHighAccuracy: true,
-        timeout: GPS_TIMEOUTS.LOW_ACCURACY, 
+        timeout: C.TIMEOUT_LOW_ACCURACY, 
         maximumAge: 5000 
       }, (position, err) => {
         if (position) {

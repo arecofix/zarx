@@ -57,6 +57,16 @@ export const routes: Routes = [
     canActivate: [authGuard, adminGuard]
   },
   {
+    path: 'admin/users',
+    loadComponent: () => import('./features/admin/components/user-management/user-management.component').then(m => m.UserManagementComponent),
+    canActivate: [authGuard, adminGuard]
+  },
+  {
+    path: 'admin/reports',
+    loadComponent: () => import('./features/admin/components/report-history/report-history.component').then(m => m.ReportHistoryComponent),
+    canActivate: [authGuard, adminGuard]
+  },
+  {
     path: 'track/:sessionId',
     loadComponent: () => import('./features/tracking/public-tracking.component').then(m => m.PublicTrackingComponent)
   }

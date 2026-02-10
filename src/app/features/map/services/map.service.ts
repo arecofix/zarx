@@ -10,7 +10,7 @@ import { Alert } from '../../../core/models/index';
 })
 export class MapService {
   private platformId = inject(PLATFORM_ID);
-  private map: L.Map | undefined;
+  public map: L.Map | undefined;
   private userMarker: L.Marker | undefined;
   
   locationService = inject(LocationService);

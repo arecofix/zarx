@@ -35,39 +35,34 @@ export interface Profile {
   referred_by?: string;
 }
 
-export interface Alert {
-  id?: string;
-  user_id?: string;
+export interface Report {
+  id: string;
+  user_id: string;
   type: ReportType | string;
   priority?: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
-  status: 'OPEN' | 'ENGAGED' | 'RESOLVED' | 'FALSE_ALARM' | 'PENDING' | 'VALIDATED' | 'VERIFIED';
-  location: string; // geography(POINT)
+  status: 'PENDING' | 'VALIDATED' | 'FALSE_ALARM' | 'RESOLVED' | 'VERIFIED' | 'OPEN' | 'ENGAGED';
+  location: string; // PostGIS POINT
   latitude?: number;
   longitude?: number;
   description?: string;
-  evidence_url?: string;
-  has_evidence?: boolean;
-  timestamp?: Date | string;
-  created_at?: string;
-  profiles?: Profile;
-  
-  // Advanced reporting fields
-  reporting_method?: ReportingMethod;
-  danger_level?: number; // 1-5
-  is_verified?: boolean;
-  is_panic?: boolean;
-  location_method?: LocationMethod;
-  ttl_expires_at?: string;
-  
-  // New fields for dispatch console
-  descripcion_detallada?: string; // Detailed description
-  personas_involucradas?: number; // Number of people involved
+  // Extended fields for Dispatch/Legacy
   address?: string; // Geocoded address
+  is_panic?: boolean;
+  danger_level?: number;
+  is_verified?: boolean;
+  personas_involucradas?: number;
+  descripcion_detallada?: string;
   
-  // Media evidence fields
-  media_url?: string; // Single media URL (legacy)
-  media_urls?: string[]; // Array of media URLs for multiple evidence files
+  // Restored Base Fields
+  evidence_url?: string;
+  created_at: string;
+  
+  // Joins
+  profiles?: Profile;
 }
+
+// Alias for compatibility if needed, or deprecate Alert in favor of Report
+export type Alert = Report;
 
 export interface HeatmapPoint {
   latitude: number;

@@ -5,6 +5,7 @@ import { Session, User, AuthChangeEvent } from '@supabase/supabase-js';
 import { Capacitor } from '@capacitor/core';
 
 import { Profile } from '../models/index';
+import { AppConstants } from '../constants/app.constants';
 
 @Injectable({
   providedIn: 'root'
@@ -20,7 +21,7 @@ export class AuthService {
   profile = signal<Profile | null>(null);
   
   // Computed Role Check
-  isAdmin = computed(() => this.profile()?.role === 'admin');
+  isAdmin = computed(() => this.profile()?.role === AppConstants.CONFIG.ROLES.ADMIN);
 
   // Initialization State
   isInitialized = signal(false);
@@ -38,6 +39,18 @@ export class AuthService {
     this.supabase.auth.onAuthStateChange((event, session) => {
       this.updateState(session);
       this.handleNavigation(event);
+    });
+
+    // Re-validate on resume (Mobile Data Clear Fix)
+    document.addEventListener('visibilitychange', async () => {
+       if (document.visibilityState === 'visible') {
+          const { data } = await this.supabase.auth.getSession();
+          if (!data.session && this.currentUser()) {
+             // Session invalid but user in memory -> Force Logout
+             this.handleNavigation('SIGNED_OUT');
+             this.updateState(null);
+          }
+       }
     });
 
     // Mark as initialized
@@ -87,9 +100,9 @@ export class AuthService {
       if (currentUrl === '/' || currentUrl.startsWith('/auth')) {
           const user = this.currentUser();
           const metadata = user?.user_metadata;
-          const role = metadata?.['role'] || 'civilian'; 
+          const role = metadata?.['role'] || AppConstants.CONFIG.ROLES.CIVILIAN; 
 
-          if (role === 'responder') {
+          if (role === AppConstants.CONFIG.ROLES.RESPONDER) {
             this.router.navigate(['/dashboard/responder']);
           } else {
             this.router.navigate(['/inicio']);

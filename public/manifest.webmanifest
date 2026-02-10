@@ -1,6 +1,6 @@
 {
-  "name": "zarx-system",
-  "short_name": "zarx-system",
+  "name": "Zarx Security",
+  "short_name": "Zarx",
   "display": "standalone",
   "scope": "./",
   "start_url": "./",
