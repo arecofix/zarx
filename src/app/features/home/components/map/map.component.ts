@@ -1,23 +1,21 @@
-import { Component, ElementRef, ViewChild, AfterViewInit, OnDestroy, PLATFORM_ID, Inject, Input, inject, signal, effect, NgZone, Output, EventEmitter } from '@angular/core';
+import { Component, ElementRef, ViewChild, AfterViewInit, OnDestroy, PLATFORM_ID, Inject, Input, inject, signal, effect, NgZone, Output, EventEmitter, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
-import * as L from 'leaflet';
-import 'leaflet.heat'; // Side effect import
 import { ZoneService } from '../../../admin/services/zone.service';
 import { MapService, PublicAlert } from '../../services/map.service';
 import { LocationService } from '../../../../core/services/location.service';
 import { HeatmapService } from '../../../../core/services/heatmap.service';
-import { AppConstants } from '../../../../core/constants/app.constants';
 import { ToastService } from '../../../../core/services/toast.service';
 
 @Component({
   selector: 'app-map',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CommonModule],
   template: `
     <div #mapContainer class="w-full h-full bg-slate-950"></div>
     
     <!-- Heatmap Toggle (Top Center) - Adjusted position -->
-    <div class="fixed top-40 left-1/2 -translate-x-1/2 z-40 transition-opacity duration-300 pointer-events-auto" [class.opacity-0]="!map">
+    <div class="fixed top-40 left-1/2 -translate-x-1/2 z-40 transition-opacity duration-300 pointer-events-auto" [class.opacity-0]="!isMapReady()">
        <button 
          (click)="toggleHeatmap()" 
          class="px-4 py-1.5 rounded-full backdrop-blur-md border shadow-lg flex items-center gap-2 text-xs font-bold transition-all active:scale-95"
@@ -153,7 +151,7 @@ import { ToastService } from '../../../../core/services/toast.service';
 })
 export class MapComponent implements AfterViewInit, OnDestroy {
   @ViewChild('mapContainer') mapContainer!: ElementRef;
-  public map: L.Map | undefined;
+  public map: any | undefined;
   
   private zoneService = inject(ZoneService);
   private mapService = inject(MapService);
@@ -162,15 +160,17 @@ export class MapComponent implements AfterViewInit, OnDestroy {
   private toastService = inject(ToastService);
   private ngZone = inject(NgZone);
   
-  private zonesLayer = new L.FeatureGroup();
-  private alertsLayer = new L.FeatureGroup(); 
-  private userLayer = new L.FeatureGroup();
+  private L: any; // Dynamic Leaflet
+  private zonesLayer: any;
+  private alertsLayer: any; 
+  private userLayer: any;
   private heatLayer: any; 
-  private draggableMarker: L.Marker | null = null; // For manual location selection
+  private draggableMarker: any | null = null; // For manual location selection
 
   showHeatmap = signal(false);
   isSelectionMode = signal(false); // Manual location selection mode
   selectedLocation = signal<{ lat: number; lng: number } | null>(null);
+  isMapReady = signal(false);
 
   @Output() locationSelected = new EventEmitter<{lat: number, lng: number}>();
 
@@ -178,7 +178,7 @@ export class MapComponent implements AfterViewInit, OnDestroy {
     // Effect to update user marker
     effect(() => {
        const pos = this.locationService.currentPosition();
-       if (pos && this.map) {
+       if (pos && this.map && this.L) {
           this.updateUserMarker(pos.coords.latitude, pos.coords.longitude);
        }
     });
@@ -204,19 +204,30 @@ export class MapComponent implements AfterViewInit, OnDestroy {
   }
 
   private async initMap(): Promise<void> {
+    // Dynamic Imports
+    this.L = await import('leaflet');
+    await import('leaflet.heat');
+
+    // Init Layers
+    this.zonesLayer = new this.L.FeatureGroup();
+    this.alertsLayer = new this.L.FeatureGroup();
+    this.userLayer = new this.L.FeatureGroup();
+
     // Default fallback (Buenos Aires, Argentina)
     let lat = -34.6037; 
     let lng = -58.3816;
     let zoom = 13;
 
     // Initialize map immediately with default location
-    this.map = L.map(this.mapContainer.nativeElement, {
+    this.map = this.L.map(this.mapContainer.nativeElement, {
       zoomControl: false, 
       attributionControl: false,
       zoomAnimation: true
     }).setView([lat, lng], zoom);
+    
+    this.ngZone.run(() => this.isMapReady.set(true));
 
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    this.L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
       maxZoom: 19,
       subdomains: 'abcd'
     }).addTo(this.map);
@@ -226,7 +237,7 @@ export class MapComponent implements AfterViewInit, OnDestroy {
     this.userLayer.addTo(this.map);
 
     // Initialize draggable marker but keep it hidden
-    const crosshairIcon = L.divIcon({
+    const crosshairIcon = this.L.divIcon({
         className: 'selection-crosshair',
         html: '<div class="w-2 h-2 bg-transparent"></div>', // Invisible, we use HTML overlay
         iconSize: [20, 20]
@@ -271,12 +282,12 @@ export class MapComponent implements AfterViewInit, OnDestroy {
   }
 
   updateUserMarker(lat: number, lng: number) {
-      if (!this.map) return;
+      if (!this.map || !this.L) return;
       
       this.userLayer.clearLayers();
       
       // Professional Blue Pulsating Dot
-      const userIcon = L.divIcon({
+      const userIcon = this.L.divIcon({
          className: 'user-marker-icon',
          html: `
             <div class="radar-marker-container">
@@ -290,7 +301,7 @@ export class MapComponent implements AfterViewInit, OnDestroy {
          iconAnchor: [32, 32]
       });
 
-      const marker = L.marker([lat, lng], { icon: userIcon, zIndexOffset: 1000 });
+      const marker = this.L.marker([lat, lng], { icon: userIcon, zIndexOffset: 1000 });
       this.userLayer.addLayer(marker);
   }
 
@@ -326,10 +337,10 @@ export class MapComponent implements AfterViewInit, OnDestroy {
     try {
       const heatmapPoints = await this.heatmapService.getDecayedHeatmap();
       
-      if ((L as any).heatLayer && heatmapPoints.length > 0) {
+      if (this.L && this.L.heatLayer && heatmapPoints.length > 0) {
         const heatData = this.heatmapService.toLeafletHeatFormat(heatmapPoints);
         
-        this.heatLayer = (L as any).heatLayer(heatData, {
+        this.heatLayer = this.L.heatLayer(heatData, {
           radius: 25,
           blur: 15,
           maxZoom: 17,
@@ -368,14 +379,15 @@ export class MapComponent implements AfterViewInit, OnDestroy {
   }
 
   renderAlertMarkers(alerts: PublicAlert[]) {
+    if (!this.L) return;
     this.alertsLayer.clearLayers();
 
     alerts.forEach(alert => {
        const color = this.getColorForType(alert.type);
        const iconHtml = this.getIconForType(alert.type);
 
-       const marker = L.marker([alert.latitude, alert.longitude], {
-         icon: L.divIcon({
+       const marker = this.L.marker([alert.latitude, alert.longitude], {
+         icon: this.L.divIcon({
            className: 'custom-div-icon',
            html: `<div style="background-color: ${color}; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 10px ${color}; font-size: 16px;">${iconHtml}</div>`,
            iconSize: [30, 30],

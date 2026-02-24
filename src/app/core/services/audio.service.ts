@@ -1,5 +1,6 @@
 import { Injectable, signal } from '@angular/core';
 import { AppConstants } from '../constants/app.constants';
+import { Logger } from '../utils/logger';
 
 @Injectable({
   providedIn: 'root'
@@ -61,7 +62,7 @@ export class AudioService {
           this.sirenAudio!.currentTime = 0;
           this.isMonitoringActive.set(true);
           this.audioEnabled.set(true);
-          console.log('✅ Monitoring activated - Audio enabled');
+          Logger.debug('Monitoring activated - Audio enabled');
         })
         .catch((error) => {
           console.warn('Audio autoplay blocked:', error);
@@ -95,7 +96,7 @@ export class AudioService {
     
     return this.sirenAudio.play()
       .then(() => {
-        console.log('🚨 Siren playing');
+        Logger.debug('Siren playing');
       })
       .catch((error) => {
         console.error('Error playing siren:', error);
@@ -116,7 +117,7 @@ export class AudioService {
     
     return this.urgentSirenAudio.play()
       .then(() => {
-        console.log('🚨 URGENT Siren playing');
+        Logger.debug('URGENT Siren playing');
       })
       .catch((error) => {
         console.error('Error playing urgent siren:', error);
@@ -150,7 +151,7 @@ export class AudioService {
     
     return this.beepAudio.play()
       .then(() => {
-        console.log('🔔 Beep playing');
+        Logger.debug('Beep playing');
       })
       .catch((error) => {
         console.error('Error playing beep:', error);

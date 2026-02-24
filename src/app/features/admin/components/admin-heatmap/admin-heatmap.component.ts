@@ -1,9 +1,8 @@
 import { Component, ElementRef, ViewChild, AfterViewInit, OnDestroy, PLATFORM_ID, Inject, inject, NgZone, signal } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
-import * as L from 'leaflet';
-import 'leaflet.heat'; 
 import { AnalyticsService, Hotspot } from '../../../../core/services/analytics.service';
 import { HeatmapService } from '../../../../core/services/heatmap.service';
+import { Logger } from '../../../../core/utils/logger';
 
 @Component({
   selector: 'app-admin-heatmap',
@@ -92,11 +91,11 @@ export class AdminHeatmapComponent implements AfterViewInit, OnDestroy {
   private heatmapService = inject(HeatmapService);
   private ngZone = inject(NgZone);
 
-  map: L.Map | undefined;
+  map: any | undefined;
   
   // Layers
   heatLayer: any;
-  clusterLayer = new L.FeatureGroup();
+  clusterLayer: any;
 
   // Signals
   showHeatmap = signal(true);
@@ -104,6 +103,7 @@ export class AdminHeatmapComponent implements AfterViewInit, OnDestroy {
   
   // Realtime subscription
   private realtimeChannel: any;
+  private L: any;
 
   constructor(@Inject(PLATFORM_ID) private platformId: Object) {}
 
@@ -118,7 +118,13 @@ export class AdminHeatmapComponent implements AfterViewInit, OnDestroy {
     }
   }
 
-  private initMap() {
+  private async initMap() {
+    this.L = await import('leaflet');
+    await import('leaflet.heat');
+    const L = this.L;
+
+    this.clusterLayer = new L.FeatureGroup();
+
     // Default center for Marcos Paz aprox
     const lat = -34.7709;
     const lng = -58.8335;
@@ -140,13 +146,16 @@ export class AdminHeatmapComponent implements AfterViewInit, OnDestroy {
     // Refresh heatmap/clusters when new reports come in or statuses change
     this.realtimeChannel = this.heatmapService.subscribeToAlertChanges(() => {
        // Debounce slightly or just reload
-       console.log('🔄 Data change detected. Refreshing Intelligence Layer...');
+       Logger.debug('🔄 Data change detected. Refreshing Intelligence Layer...');
        const currentHours = 168; // TODO: Get from current selection signal/var
        this.loadData(currentHours);
     });
   }
 
   async loadData(hoursAgo: number) {
+    if (!this.L) return;
+    const L = this.L;
+
     // 1. Load Hotspots (Clusters)
     const hotspots = await this.analytics.getHotspots(hoursAgo);
     this.renderClusters(hotspots);
@@ -154,11 +163,11 @@ export class AdminHeatmapComponent implements AfterViewInit, OnDestroy {
     // 2. Load Heatmap (Points)
     const points = await this.heatmapService.getHeatmapData(hoursAgo);
     
-    if ((L as any).heatLayer && this.map) {
+    if (L.heatLayer && this.map) {
        if (this.heatLayer) this.map.removeLayer(this.heatLayer);
        
        const heatPoints = points.map(p => [p.latitude, p.longitude, p.intensity]);
-       this.heatLayer = (L as any).heatLayer(heatPoints, {
+       this.heatLayer = L.heatLayer(heatPoints, {
           radius: 40,
           blur: 25,
           minOpacity: 0.3,
@@ -178,6 +187,9 @@ export class AdminHeatmapComponent implements AfterViewInit, OnDestroy {
   }
 
   renderClusters(hotspots: Hotspot[]) {
+    if (!this.L) return;
+    const L = this.L;
+
     this.clusterLayer.clearLayers();
     
     hotspots.forEach(h => {

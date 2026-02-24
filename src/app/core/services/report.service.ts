@@ -3,6 +3,7 @@ import { SupabaseService } from './supabase.service';
 import { LocationService } from './location.service';
 import { ToastService } from './toast.service';
 import { AuthService } from './auth.service';
+import { Logger } from '../utils/logger';
 import { Report, ReportType } from '../models'; // Unified Model
 import { AppConstants } from '../constants/app.constants';
 import { Haptics, NotificationType } from '@capacitor/haptics';
@@ -30,6 +31,9 @@ export class ReportService {
   // Admin State - HISTORY / VECINAL (Standard)
   historyLog = signal<Report[]>([]);
   
+  // Fallback mode for when DB relationships are missing
+  private fallbackMode = false;
+  
   isLoadingReports = signal(false);
 
   private realtimeChannel: RealtimeChannel | null = null;
@@ -44,40 +48,68 @@ export class ReportService {
    * Fetch all reports that need moderation (PENDING status)
    * Includes User Profile data.
    */
-  async fetchPendingReports() {
+  async fetchPendingReports(): Promise<void> {
     this.isLoadingReports.set(true);
     try {
-      // 1. Fetch Initial Data
-      const { data, error } = await this.supabase
+      // Fetch Active Reports (Status != 'RESOLVED' && Status != 'FALSE_ALARM')
+      // This ensures we see ongoing SOS/Critical events in the Live Feed, not just Pending ones.
+      let query = this.supabase
         .from('reports')
-        .select(`
+        .select(this.fallbackMode ? '*' : `
           *,
           profiles:user_id ( id, full_name, avatar_url, phone, username, role )
         `)
-        .eq('status', 'PENDING')
+        .not('status', 'in', '("RESOLVED","FALSE_ALARM")') 
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      const { data, error } = await query;
+
+      if (error) {
+        // Auto-detect missing relation and retry once
+        if (error.code === 'PGRST200' && !this.fallbackMode) {
+           console.warn('⚠️ PGRST200 Detected: Retrying in Fallback Mode (No Profiles)...');
+           this.fallbackMode = true;
+           this.toast.warning('Base de datos incompleta. Mostrando reportes sin datos de usuario.');
+           return this.fetchPendingReports(); // Retry recursively once
+        }
+        throw error;
+      }
       
       const reports = (data || []).map(this.mapReportLocation);
       
-      // Filter Initial Load
+      // Filter Logic:
+      // Live Feed: All Critical Reports regardless of status (as long as active)
       const live = reports.filter(r => this.isCritical(r.type));
-      const history = reports.filter(r => !this.isCritical(r.type));
+      
+      // Queue/History/Moderation: Non-critical reports that are specifically PENDING moderation
+      // We don't want approved potholes cluttering the "Pending" list, they go to history.
+      const pendingNonCritical = reports.filter(r => !this.isCritical(r.type) && r.status === 'PENDING');
 
       this.liveModerationQueue.set(live);
-      this.historyLog.set(history);
+      // For the implicit moderation queue of non-criticals, we might need another signal or just let History handle them.
+      // But typically "History Log" in report service was used for "Non-Critical Pending".
+      // Let's keep it consistent: historyLog here will hold pending non-criticals for moderation if used that way, 
+      // or we can just ignore them here if ReportHistoryComponent uses getAllReports.
+      // Assuming existing usage:
+      this.historyLog.set(pendingNonCritical); 
 
-      // 2. Start Realtime Subscription (Pattern: Observer)
       this.startRealtimeListener();
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching reports:', error);
-      this.toast.error('Error al cargar reportes pendientes.');
+      
+      // Specific handling for missing Foreign Key (Common in new setups)
+      if (error.code === 'PGRST200') {
+          console.error('👉 DB FIX REQUIRED: Run migrations/20240210000003_fix_admin_permissions.sql');
+          this.toast.error('Error Crítico: Faltan relaciones DB. Ejecute script SQL.');
+      } else {
+          this.toast.error('Error al cargar reportes activos.');
+      }
     } finally {
       this.isLoadingReports.set(false);
     }
   }
+
 
   private startRealtimeListener() {
     if (this.realtimeChannel) return;
@@ -96,7 +128,7 @@ export class ReportService {
         }
       )
       .subscribe((status) => {
-         console.log('Realtime Subscription Status:', status);
+         Logger.debug('Realtime Subscription Status:', status);
       });
   }
 
@@ -141,39 +173,71 @@ export class ReportService {
   }
 
   // Helper to determine stream
-  private isCritical(type: string | ReportType): boolean {
-      return type === 'SOS' || type === 'PANIC' || type === 'RIESGO_VIDA' || type === 'ROBO';
+  public isCritical(type: string | ReportType): boolean {
+      const t = type as string;
+      return [
+        'SOS', 'PANIC', 'RIESGO_VIDA', 'ROBO', 
+        'INCENDIO', 'ACCIDENTE', 'EMERGENCIA_MEDICA', 
+        'DELITO_PROCESO', 'ACTIVIDAD_DELICTIVA'
+      ].includes(t);
   }
 
   /**
    * Fetch ALL reports (History/Log) with pagination and filters
    */
-  async getAllReports(filters?: { status?: string, type?: string }, page = 0, pageSize = 50): Promise<Report[]> {
-    let query = this.supabase
-      .from('reports')
-      .select(`
-         *,
-         profiles:user_id ( id, full_name, avatar_url, phone, username, role )
-      `)
-      .order('created_at', { ascending: false })
-      .range(page * pageSize, (page + 1) * pageSize - 1);
+  async getAllReports(filters?: { status?: string, type?: string, category?: 'SECURITY' | 'SERVICE' }, page = 0, pageSize = 50): Promise<Report[]> {
+    try {
+        let query = this.supabase
+          .from('reports')
+          .select(this.fallbackMode ? '*' : `
+             *,
+             profiles:user_id ( id, full_name, avatar_url, phone, username, role )
+          `)
+          .order('created_at', { ascending: false })
+          .range(page * pageSize, (page + 1) * pageSize - 1);
 
-    if (filters?.status) {
-       query = query.eq('status', filters.status);
-    }
-    
-    if (filters?.type) {
-       query = query.eq('type', filters.type);
-    }
+        if (filters?.status) {
+           query = query.eq('status', filters.status);
+        }
+        
+        if (filters?.type) {
+           query = query.eq('type', filters.type);
+        }
 
-    const { data, error } = await query;
-    
-    if (error) {
-       console.error('Error fetching all reports:', error);
-       return [];
-    }
+        // Category Filter support
+        if (filters?.category) {
+            // Critical Types List matches isCritical logic
+            const criticalTypes = ['SOS', 'PANIC', 'RIESGO_VIDA', 'ROBO', 'INCENDIO', 'ACCIDENTE', 'EMERGENCIA_MEDICA', 'DELITO_PROCESO', 'ACTIVIDAD_DELICTIVA'];
+            
+            if (filters.category === 'SECURITY') {
+                 query = query.in('type', criticalTypes);
+            } else {
+                 // For services/infrastructure (NOT IN Critical Types)
+                 // Using Supabase/Postgrest filter syntax for 'not.in'
+                 // Format: ('Type1','Type2')
+                 const list = `(${criticalTypes.map(t => `"${t}"`).join(',')})`;
+                 query = query.not('type', 'in', list);
+            }
+        }
 
-    return (data || []).map(this.mapReportLocation);
+        const { data, error } = await query;
+        
+        if (error) {
+           if (error.code === 'PGRST200' && !this.fallbackMode) {
+               console.warn('⚠️ PGRST200 Detected in History: Retrying in Fallback Mode...');
+               this.fallbackMode = true;
+               // Recursive retry
+               return this.getAllReports(filters, page, pageSize);
+           }
+           console.error('Error fetching all reports:', error);
+           return [];
+        }
+
+        return (data || []).map(this.mapReportLocation);
+    } catch (e) {
+        console.error('Exception fetching reports:', e);
+        return [];
+    }
   }
 
   /**
@@ -186,8 +250,8 @@ export class ReportService {
   /**
    * Reject a report (mark as False Alarm)
    */
-  async rejectReport(reportId: string): Promise<boolean> {
-    return this.updateReportStatus(reportId, 'FALSE_ALARM');
+  async rejectReport(reportId: string, reason?: string): Promise<boolean> {
+    return this.updateReportStatus(reportId, 'FALSE_ALARM', reason);
   }
 
   /**
@@ -207,11 +271,14 @@ export class ReportService {
   /**
    * Generic Status Update
    */
-  private async updateReportStatus(reportId: string, status: 'VALIDATED' | 'FALSE_ALARM' | 'RESOLVED'): Promise<boolean> {
+  private async updateReportStatus(reportId: string, status: 'VALIDATED' | 'FALSE_ALARM' | 'RESOLVED', reason?: string): Promise<boolean> {
     try {
+      const updates: any = { status: status };
+      if (reason) updates.rejection_reason = reason;
+
       const { error } = await this.supabase
         .from('reports')
-        .update({ status: status })
+        .update(updates)
         .eq('id', reportId);
 
       if (error) throw error;
@@ -224,7 +291,7 @@ export class ReportService {
       this.toast.success(msg);
       
       // Notify User (Side Effect)
-      this.notifyUserStatusChange(reportId, status).catch(console.warn);
+      this.notifyUserStatusChange(reportId, status, reason).catch(console.warn);
 
       return true;
 
@@ -236,41 +303,42 @@ export class ReportService {
   }
 
   // Helper to notify user status change (Command/SideEffect)
-  private async notifyUserStatusChange(reportId: string, status: string) {
-     // Ideally, we should notify the user via a 'notifications' table or push
-     // For now, logging.
-     console.log(`User notified of status change: ${status} for report ${reportId}`);
+  private async notifyUserStatusChange(reportId: string, status: string, reason?: string) {
+     try {
+        const { data: report } = await this.supabase.from('reports').select('user_id, type').eq('id', reportId).single();
+        if (!report || !report.user_id) return;
+
+        let title = 'Actualización de Reporte';
+        let body = `El estado de tu reporte ha cambiado a ${status}.`;
+        let type = 'info';
+
+        if (status === 'VALIDATED') {
+            title = '✅ Reporte Aprobado';
+            body = `Tu reporte de ${report.type} ha sido validado y es visible para la comunidad.`;
+            type = 'success';
+        } else if (status === 'FALSE_ALARM') {
+            title = '🚫 Reporte Rechazado';
+            body = `Tu reporte de ${report.type} ha sido marcado como no válido/falsa alarma.`;
+            if (reason) body += ` Motivo: ${reason}`;
+            type = 'error';
+        } else if (status === 'RESOLVED') {
+            title = '🏁 Reporte Finalizado';
+            body = `El incidente ${report.type} ha sido marcado como RESUELTO.`;
+            type = 'success';
+        }
+
+        // Insert Notification
+        await this.supabase.from('notifications').insert({
+            user_id: report.user_id,
+            title,
+            body,
+            type
+        });
+
+     } catch (e) {
+        console.warn('Failed to notify user:', e);
+     }
   }
-
-  /**
-   * Helper to parse PostGIS/Supabase location to lat/lng
-   */
-  private mapReportLocation = (report: any): Report => {
-    let lat = report.latitude;
-    let lng = report.longitude;
-    
-    // Parse POINT(lng lat) if needed
-    if (!lat && report.location) {
-       if (typeof report.location === 'string' && report.location.startsWith('POINT')) {
-          const parts = report.location.replace('POINT(', '').replace(')', '').split(' ');
-          if (parts.length === 2) {
-             lng = parseFloat(parts[0]);
-             lat = parseFloat(parts[1]);
-          }
-       }
-    }
-
-    // Ensure profile is object not array
-    const profile = Array.isArray(report.profiles) ? report.profiles[0] : report.profiles;
-
-    return {
-      ...report,
-      latitude: lat,
-      longitude: lng,
-      profiles: profile
-    };
-  }
-
 
   // ==================================================================================
   // USER REPORTING METHODS (Command Pattern)
@@ -363,19 +431,53 @@ export class ReportService {
     }
   }
 
+  /**
+   * Helper to parse PostGIS/Supabase location to lat/lng
+   * Defined as arrow function or binded method
+   */
+  private mapReportLocation = (report: any): Report => {
+    let lat = report.latitude;
+    let lng = report.longitude;
+    
+    // Parse POINT(lng lat) if needed
+    if (!lat && report.location) {
+       if (typeof report.location === 'string' && report.location.startsWith('POINT')) {
+          const parts = report.location.replace('POINT(', '').replace(')', '').split(' ');
+          if (parts.length === 2) {
+             lng = parseFloat(parts[0]);
+             lat = parseFloat(parts[1]);
+          }
+       }
+    }
+
+    // Ensure profile is object not array
+    const profile = Array.isArray(report.profiles) ? report.profiles[0] : report.profiles;
+
+    return {
+      ...report,
+      latitude: lat,
+      longitude: lng,
+      profiles: profile
+    };
+  }
+
   private async safeHaptics(type: NotificationType) {
     if (Capacitor.isNativePlatform()) {
       try { await Haptics.notification({ type }); } catch (e) {}
     }
   }
 
-  async getNearbyReports(lat: number, lon: number, radiusMeters: number = 2000): Promise<any[]> {
+  async getNearbyReports(lat: number, lon: number, radiusMeters: number = 2000): Promise<Report[]> {
     const { data, error } = await this.supabase.rpc('get_alerts_in_radius', {
-      user_lat: lat,
-      user_lon: lon,
+      center_lat: lat,
+      center_lng: lon,
       radius_meters: radiusMeters
     });
-    return data || [];
+    if (error) {
+      console.warn('Error fetching nearby reports:', error.message);
+      return [];
+    }
+    return (data || []).map(this.mapReportLocation);
   }
 
   /**
@@ -407,14 +509,15 @@ export class ReportService {
     return data || [];
   }
 
-  private determinePriority(type: ReportType): 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' {
-     const critical = [ReportType.SOS, ReportType.RIESGO_VIDA, ReportType.ROBO, ReportType.DELITO_PROCESO, ReportType.ACTIVIDAD_DELICTIVA];
-     const high = [ReportType.INCENDIO, ReportType.EMERGENCIA_MEDICA, ReportType.ACCIDENTE];
-     const low = [ReportType.CORTE_DE_LUZ, ReportType.LUMINARIA_ROTA, ReportType.BACHE, ReportType.BASURA, ReportType.PELIGRO_VIAL, ReportType.PELIGRO_VIAL_OBSTRUCCION];
-
-     if (critical.includes(type)) return 'CRITICAL';
-     if (high.includes(type)) return 'HIGH';
-     if (low.includes(type)) return 'LOW';
-     return 'MEDIUM';
+  public determinePriority(type: ReportType | string): 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' {
+     const t = type as string;
+     const critical = ['SOS', 'RIESGO_VIDA', 'ROBO', 'DELITO_PROCESO', 'ACTIVIDAD_DELICTIVA'];
+     const high = ['INCENDIO', 'EMERGENCIA_MEDICA', 'ACCIDENTE'];
+     
+     if (critical.includes(t)) return 'CRITICAL';
+     if (high.includes(t)) return 'HIGH';
+     if (['CORTE_DE_LUZ', 'PELIGRO_VIAL'].includes(t)) return 'MEDIUM';
+     
+     return 'LOW';
   }
 }

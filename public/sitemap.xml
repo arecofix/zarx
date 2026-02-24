@@ -11,6 +11,13 @@
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
+
+  <!-- Servicio Técnico Celulares -->
+  <url>
+    <loc>https://www.arecofix.com.ar/celular</loc>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
   
   <!-- Inicio / Mapa -->
   <url>

@@ -1,6 +1,5 @@
 import { Injectable, inject } from '@angular/core';
 import { SupabaseService } from '../../../core/services/supabase.service';
-import * as L from 'leaflet';
 
 export interface Zone {
   id?: string;
@@ -45,7 +44,10 @@ export class ZoneService {
    * Carga las zonas desde Supabase.
    * Convierte la respuesta (que puede venir como hex o JSON) a capas de Leaflet.
    */
-  async loadZones(): Promise<L.Layer[]> {
+  async loadZones(): Promise<any[]> {
+    // Dynamic import to avoid SSR issues
+    const L = await import('leaflet');
+
     // Truco Robustez: Hacemos un cast explícito en la query para devolver GeoJSON siempre.
     // Esto evita lidiar con WKB hexadecimal o configuraciones extrañas del servidor.
     const { data, error } = await this.supabase
@@ -59,7 +61,7 @@ export class ZoneService {
 
     if (!data || data.length === 0) return [];
 
-    const layers: L.Layer[] = [];
+    const layers: any[] = [];
 
     data.forEach((zone: any) => {
       // Usamos geom_json si existe (cast explícito), o geom si el servidor ya lo devolvió limpio
@@ -92,7 +94,7 @@ export class ZoneService {
         });
 
         // Agregamos a la lista plana de capas (nota: L.geoJSON devuelve un LayerGroup, extraemos las capas internas)
-        layer.eachLayer((l) => {
+        layer.eachLayer((l: any) => {
             // Asignamos propiedades extra para referencia fácil luego si se necesita
             (l as any).feature = feature;
             layers.push(l);

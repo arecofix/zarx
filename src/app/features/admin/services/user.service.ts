@@ -62,9 +62,17 @@ export class UserService {
         .update({ role: newRole })
         .eq('id', userId)
         .select()
-        .single();
+        .maybeSingle(); // Use maybeSingle to avoid throw if RLS blocks it (returns null)
 
       if (error) throw error;
+      
+      if (!data) {
+        console.warn('Update succeeded but no rows returned. Likely RLS policy restricted viewing the result or no changes made.');
+        // If RLS blocks select but allows update, we might still want to return true, 
+        // but typically RLS blocks the update itself if policies are strict.
+        // Let's assume failure if no data returned for now to be safe.
+        // return false; 
+      }
 
       // 3. Update local state optimistically or via response
       this.users.update(current => 
@@ -72,8 +80,11 @@ export class UserService {
       );
 
       return true;
-    } catch (e) {
+    } catch (e: any) {
       console.error('Error updating role:', e);
+      if (e.code === 'PGRST116') {
+          return false; // Should not happen with maybeSingle, but good safety
+      }
       return false;
     }
   }

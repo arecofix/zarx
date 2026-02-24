@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
+import { Logger } from '../../core/utils/logger';
 
 @Component({
   selector: 'app-settings',
@@ -84,6 +85,6 @@ export class SettingsComponent {
       : 'Se ha desactivado la limpieza automática.';
     
     // In a real app, save to backend
-    console.log(msg);
+    Logger.debug(msg);
   }
 }

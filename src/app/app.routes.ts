@@ -12,6 +12,10 @@ export const routes: Routes = [
     path: 'inicio',
     loadComponent: () => import('./features/home/home').then(m => m.HomeComponent)
   },
+  {
+    path: 'celular',
+    loadComponent: () => import('./features/celular/celular.component').then(m => m.CelularComponent)
+  },
 
   {
     path: 'auth/login',
@@ -69,5 +73,9 @@ export const routes: Routes = [
   {
     path: 'track/:sessionId',
     loadComponent: () => import('./features/tracking/public-tracking.component').then(m => m.PublicTrackingComponent)
+  },
+  {
+    path: '**',
+    redirectTo: 'inicio'
   }
 ];

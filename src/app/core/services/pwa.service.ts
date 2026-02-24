@@ -1,5 +1,6 @@
 import { Injectable, signal, PLATFORM_ID, inject } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
+import { Logger } from '../utils/logger';
 
 @Injectable({
   providedIn: 'root'
@@ -26,11 +27,11 @@ export class PwaService {
       this.deferredPrompt.set(e as BeforeInstallPromptEvent);
       this.isInstallable.set(true);
       
-      console.log('PWA: System ready for install!');
+      Logger.debug('PWA: System ready for install!');
     });
 
     window.addEventListener('appinstalled', () => {
-      console.log('PWA: Application installed');
+      Logger.debug('PWA: Application installed');
       this.deferredPrompt.set(null);
       this.isInstallable.set(false);
     });
@@ -46,7 +47,7 @@ export class PwaService {
     // Wait for the user to respond to the prompt
     const { outcome } = await promptEvent.userChoice;
     
-    console.log(`PWA: User response to install prompt: ${outcome}`);
+    Logger.debug(`PWA: User response to install prompt: ${outcome}`);
 
     // Check outcome
     if (outcome === 'accepted') {

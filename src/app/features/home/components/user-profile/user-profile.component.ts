@@ -2,11 +2,12 @@ import { Component, Inject, inject, OnInit, PLATFORM_ID, signal, Injector, effec
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { Router } from '@angular/router';
 import { AuthService } from '../../../../core/services/auth.service';
-import { GamificationService, Rank } from '../../../../core/services/gamification.service';
+import { GamificationService } from '../../../../core/services/gamification.service';
 import { CameraService } from '../../../../core/services/camera.service';
 import { SupabaseService } from '../../../../core/services/supabase.service';
 import { ToastService } from '../../../../core/services/toast.service';
 import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
+import { Logger } from '../../../../core/utils/logger';
 import { FormsModule } from '@angular/forms';
 import { Profile } from '../../../../core/models';
 
@@ -96,15 +97,15 @@ import { Profile } from '../../../../core/models';
          <!-- STATS GRID -->
          <div class="grid grid-cols-3 gap-3 mb-8">
             <div class="bg-slate-900/50 p-3 rounded-xl border border-slate-800 text-center">
-               <div class="text-2xl font-bold text-white mb-1">12</div>
+               <div class="text-2xl font-bold text-white mb-1">{{ totalReports() }}</div>
                <div class="text-[9px] text-slate-300 uppercase font-bold">REPORTES</div>
             </div>
             <div class="bg-slate-900/50 p-3 rounded-xl border border-slate-800 text-center">
-               <div class="text-2xl font-bold text-emerald-400 mb-1">8</div>
+               <div class="text-2xl font-bold text-emerald-400 mb-1">{{ validatedReports() }}</div>
                <div class="text-[9px] text-slate-300 uppercase font-bold">VALIDADOS</div>
             </div>
             <div class="bg-slate-900/50 p-3 rounded-xl border border-slate-800 text-center">
-               <div class="text-2xl font-bold text-blue-400 mb-1">98%</div>
+               <div class="text-2xl font-bold text-blue-400 mb-1">{{ trustPercent() }}%</div>
                <div class="text-[9px] text-slate-300 uppercase font-bold">CONFIANZA</div>
             </div>
          </div>
@@ -168,6 +169,11 @@ export class UserProfileComponent implements OnInit {
   isAdmin = signal(false);
   userScore = signal(0); 
   rankInfo = signal<any>(null);
+
+  // Stats (real data from DB)
+  totalReports = signal(0);
+  validatedReports = signal(0);
+  trustPercent = signal(0);
   
   // Edit State
   phone = '';
@@ -200,13 +206,39 @@ export class UserProfileComponent implements OnInit {
   async loadProfile(userId: string) {
     const { data } = await this.supabase.from('profiles').select('*').eq('id', userId).single();
     if (data) {
-       console.log('📋 Profile loaded:', data); // Debug
        this.profile.set(data as any); 
        
        this.userScore.set(data.reputation_score || 150); 
        this.phone = data.phone || '';
        this.isAdmin.set(data.role === 'admin');
        this.refreshRank();
+       this.loadUserStats(userId);
+    }
+  }
+
+  private async loadUserStats(userId: string) {
+    try {
+      // Total reports by user
+      const { count: total } = await this.supabase
+        .from('reports')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId);
+
+      // Validated reports
+      const { count: validated } = await this.supabase
+        .from('reports')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .in('status', ['VALIDATED', 'RESOLVED']);
+
+      const totalCount = total || 0;
+      const validatedCount = validated || 0;
+
+      this.totalReports.set(totalCount);
+      this.validatedReports.set(validatedCount);
+      this.trustPercent.set(totalCount > 0 ? Math.round((validatedCount / totalCount) * 100) : 100);
+    } catch (e) {
+      console.warn('Could not load user stats:', e);
     }
   }
 
@@ -228,7 +260,8 @@ export class UserProfileComponent implements OnInit {
   }
 
   onAvatarLoadError(event: Event) {
-    console.warn('Avatar failed to load, using fallback');
+    // Silent fail for avatar, just fallback
+    // console.debug('Avatar failed to load, using fallback');
     this.avatarLoadError.set(true);
     // Set fallback image
     (event.target as HTMLImageElement).src = 'assets/images/placeholder_avatar.png';
@@ -246,7 +279,7 @@ export class UserProfileComponent implements OnInit {
       if (this.avatarBlob) {
          const fileName = `${currentProfile.id}_${Date.now()}.jpg`;
          
-         console.log('📤 Uploading avatar:', fileName);
+         Logger.debug('📤 Uploading avatar:', fileName);
          
          const { data: uploadData, error: uploadError } = await this.supabase.storage
             .from('avatars') 
@@ -266,7 +299,7 @@ export class UserProfileComponent implements OnInit {
          } else {
              const { data: { publicUrl } } = this.supabase.storage.from('avatars').getPublicUrl(fileName);
              updates.avatar_url = publicUrl;
-             console.log('✅ Avatar uploaded:', publicUrl);
+             Logger.debug('✅ Avatar uploaded:', publicUrl);
          }
       }
 

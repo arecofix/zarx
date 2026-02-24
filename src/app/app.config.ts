@@ -1,6 +1,7 @@
 import { ApplicationConfig, provideZonelessChangeDetection, isDevMode } from '@angular/core';
+import { provideClientHydration } from '@angular/platform-browser';
 import { provideIonicAngular } from '@ionic/angular/standalone';
-import { provideRouter } from '@angular/router';
+import { provideRouter, withEnabledBlockingInitialNavigation, withInMemoryScrolling } from '@angular/router';
 import { provideFirebaseApp, initializeApp } from '@angular/fire/app';
 import { provideMessaging, getMessaging } from '@angular/fire/messaging';
 
@@ -11,7 +12,12 @@ import { environment } from '../environments/environment';
 export const appConfig: ApplicationConfig = {
   providers: [
     provideZonelessChangeDetection(),
-    provideRouter(routes),
+    provideRouter(
+      routes,
+      withEnabledBlockingInitialNavigation(),
+      withInMemoryScrolling({ anchorScrolling: 'enabled', scrollPositionRestoration: 'enabled' })
+    ),
+    provideClientHydration(),
     provideIonicAngular({
       mode: 'ios'
     }),

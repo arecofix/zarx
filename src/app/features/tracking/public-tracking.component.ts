@@ -2,7 +2,6 @@ import { Component, Inject, inject, OnInit, OnDestroy, PLATFORM_ID, ViewChild, E
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { SupabaseService } from '../../core/services/supabase.service';
-import * as L from 'leaflet';
 
 @Component({
   selector: 'app-public-tracking',
@@ -64,10 +63,11 @@ export class PublicTrackingComponent implements OnInit, OnDestroy {
   private route = inject(ActivatedRoute);
   private supabase = inject(SupabaseService).client;
   
-  private map: L.Map | undefined;
-  private marker: L.Marker | undefined;
-  private pathLine: L.Polyline | undefined;
-  private pathPoints: L.LatLngExpression[] = [];
+  private map: any | undefined;
+  private marker: any | undefined;
+  private pathLine: any | undefined;
+  private pathPoints: any[] = [];
+  private L: any;
 
   sessionId: string | null = null;
   loading = signal(true);
@@ -79,16 +79,22 @@ export class PublicTrackingComponent implements OnInit, OnDestroy {
   async ngOnInit() {
     this.sessionId = this.route.snapshot.paramMap.get('sessionId');
     
-    if (isPlatformBrowser(this.platformId) && this.sessionId) {
-      this.initMap();
-      this.subscribeToSession(this.sessionId);
-    } else {
-       this.error.set(true);
-       this.loading.set(false);
+    // Ensure we are in browser before init map
+    if (isPlatformBrowser(this.platformId)) {
+      if (this.sessionId) {
+        await this.initMap();
+        this.subscribeToSession(this.sessionId);
+      } else {
+        this.error.set(true);
+        this.loading.set(false);
+      }
     }
   }
 
-  private initMap() {
+  private async initMap() {
+    this.L = await import('leaflet');
+    const L = this.L;
+
     this.map = L.map(this.mapContainer.nativeElement, { zoomControl: false }).setView([0, 0], 2);
     L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(this.map);
     
@@ -138,13 +144,16 @@ export class PublicTrackingComponent implements OnInit, OnDestroy {
   }
 
   private updatePosition(lat: number, lng: number) {
-    if (!this.map) return;
+    if (!this.map || !this.L) return;
+    const L = this.L;
 
     const newLatLng = new L.LatLng(lat, lng);
     
     // Add to path
     this.pathPoints.push(newLatLng);
-    this.pathLine?.setLatLngs(this.pathPoints);
+    if (this.pathLine) {
+        this.pathLine.setLatLngs(this.pathPoints);
+    }
 
     // Update Marker
     if (!this.marker) {

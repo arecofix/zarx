@@ -1,5 +1,6 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { SupabaseService } from './supabase.service';
+import { AppConstants } from '../constants/app.constants';
 
 export interface UploadProgress {
   fileName: string;
@@ -19,7 +20,7 @@ export class MediaUploadService {
   uploadProgress = signal<UploadProgress | null>(null);
   isUploading = signal(false);
 
-  private readonly BUCKET_NAME = 'incidencia-evidencia';
+  private readonly BUCKET_NAME = AppConstants.CONFIG.STORAGE.BUCKET_EVIDENCE;
 
   /**
    * Upload media file to Supabase Storage

@@ -1,7 +1,7 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { SupabaseService } from './supabase.service';
 import { ToastService } from './toast.service';
-import { ActivatedRoute } from '@angular/router';
+import { Logger } from '../utils/logger';
 
 @Injectable({
   providedIn: 'root'
@@ -9,21 +9,20 @@ import { ActivatedRoute } from '@angular/router';
 export class ReferralService {
   private supabase = inject(SupabaseService).client;
   private toast = inject(ToastService);
-  private route = inject(ActivatedRoute);
 
-  pendingRefercalCode = signal<string | null>(null);
+  pendingReferralCode = signal<string | null>(null);
 
   constructor() {
     // Check for deep link param 'ref' on init
     const params = new URLSearchParams(window.location.search);
     const ref = params.get('ref');
     if (ref) {
-      this.pendingRefercalCode.set(ref);
+      this.pendingReferralCode.set(ref);
       localStorage.setItem('zarx_ref_code', ref); // Persist for signup flow
     } else {
         // Recover from storage if page reloaded
         const stored = localStorage.getItem('zarx_ref_code');
-        if (stored) this.pendingRefercalCode.set(stored);
+        if (stored) this.pendingReferralCode.set(stored);
     }
   }
 
@@ -70,7 +69,7 @@ export class ReferralService {
    * Should be called after user created account (before onboarding finish)
    */
   async applyPendingReferral() {
-    const code = this.pendingRefercalCode();
+    const code = this.pendingReferralCode();
     if (!code) return;
 
     try {
@@ -80,9 +79,9 @@ export class ReferralService {
       if (error) throw error;
       
       if (data) {
-          console.log('Referral applied successfully');
+          Logger.debug('Referral applied successfully');
           localStorage.removeItem('zarx_ref_code'); // Clear
-          this.pendingRefercalCode.set(null);
+          this.pendingReferralCode.set(null);
       }
     } catch (e) {
       console.error('Failed to apply referral:', e);

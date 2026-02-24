@@ -1,6 +1,6 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { SupabaseService } from '../../../core/services/supabase.service';
-import { Alert } from '../../../core/models';
+import { Report } from '../../../core/models';
 import { AppConstants } from '../../../core/constants/app.constants';
 import { RealtimeChannel } from '@supabase/supabase-js';
 
@@ -11,7 +11,7 @@ export class DashboardService {
   private supabase = inject(SupabaseService).client;
   
   // Signals
-  incomingAlerts = signal<Alert[]>([]);
+  incomingAlerts = signal<Report[]>([]);
   isLoading = signal(false);
 
   private subscription: RealtimeChannel | null = null;
@@ -24,7 +24,6 @@ export class DashboardService {
   private initAudio() {
     if (typeof Audio !== 'undefined') {
       try {
-        // Use a distinct beep for admin feed
         this.audio = new Audio(AppConstants.ASSETS.AUDIO.ALERT_BEEP || 'assets/audio/beep.mp3'); 
         this.audio.load();
       } catch (error) {
@@ -33,24 +32,17 @@ export class DashboardService {
     }
   }
 
-  private playSound() {
+  public playSound() {
     if (this.audio) {
       this.audio.currentTime = 0;
       this.audio.play().catch(() => {});
     }
   }
 
-  /**
-   * Fetch initial alerts with user profile data
-   */
-  /**
-   * Fetch initial alerts with user profile data
-   */
   async getAlerts() {
     try {
       this.isLoading.set(true);
       
-      // Attempt 1: Explicit Join with correct FK syntax
       let { data, error } = await this.supabase
         .from('reports')
         .select(`
@@ -60,7 +52,6 @@ export class DashboardService {
         .order('created_at', { ascending: false })
         .limit(50);
 
-      // Attempt 2: Fallback if Join fails
       if (error || !data) {
         console.warn('Join failed, trying fallback fetch...');
         const { data: simpleData, error: simpleError } = await this.supabase
@@ -72,22 +63,21 @@ export class DashboardService {
         if (simpleError) throw simpleError;
         
         if (simpleData) {
-          // Fetch profiles separately for these reports
-          const userIds = simpleData.map(r => r.user_id);
+          const userIds = simpleData.map((r: any) => r.user_id);
           const { data: profData } = await this.supabase
             .from('profiles')
             .select('id, full_name, avatar_url, phone')
             .in('id', userIds);
           
-          data = simpleData.map(r => ({
+          data = simpleData.map((r: any) => ({
             ...r,
-            profiles: profData?.find(p => p.id === r.user_id) || null
+            profiles: profData?.find((p: any) => p.id === r.user_id) || null
           }));
         }
       }
 
       if (data) {
-        const alerts = data.map((alert: any) => {
+        const alerts = data.map((alert: any): Report => {
            const profileData = Array.isArray(alert.profiles) ? alert.profiles[0] : alert.profiles;
            
            let lat = alert.latitude; 
@@ -110,7 +100,7 @@ export class DashboardService {
              latitude: lat,
              longitude: lng,
              profiles: profileData
-           };
+           } as Report;
         });
         this.incomingAlerts.set(alerts);
       }
@@ -121,9 +111,6 @@ export class DashboardService {
     }
   }
 
-  /**
-   * Subscribe to new incoming reports
-   */
   subscribeToAlerts() {
     if (this.subscription) return;
 
@@ -159,12 +146,12 @@ export class DashboardService {
         .single();
         
       if (data) {
-        const profileData = Array.isArray((data as any).profiles) ? (data as any).profiles[0] : (data as any).profiles;
+        const reportData = data as any;
+        const profileData = Array.isArray(reportData.profiles) ? reportData.profiles[0] : reportData.profiles;
         
-        // Manual Location Parse
-        let lat = (data as any).latitude;
-        let lng = (data as any).longitude;
-        const loc = (data as any).location;
+        let lat = reportData.latitude;
+        let lng = reportData.longitude;
+        const loc = reportData.location;
 
         if (!lat && loc) {
             if (typeof loc === 'object' && loc.coordinates) {
@@ -178,14 +165,14 @@ export class DashboardService {
             }
         }
 
-        const normalized = { 
-            ...data, 
+        const normalized: Report = { 
+            ...reportData, 
             latitude: lat,
             longitude: lng,
             profiles: profileData 
         };
 
-        this.incomingAlerts.update(current => [normalized as any, ...current]);
+        this.incomingAlerts.update(current => [normalized, ...current]);
         this.playSound();
       }
     } catch (error) {
@@ -193,17 +180,11 @@ export class DashboardService {
     }
   }
 
-  /**
-   * Action: Verify/Resolve Alert with Feedback
-   */
   async verifyAlert(alertId: string, status: 'RESOLVED' | 'FALSE_ALARM' | 'ENGAGED', feedback?: string) {
-    // Optimistic Remove from Feed if Resolved/False
     if (status !== 'ENGAGED') {
        this.incomingAlerts.update(list => list.filter(a => a.id !== alertId));
     }
 
-    // Map UI Status 'RESOLVED' (Button "Validar") to DB Status 'VALIDATED' (Triggers Points)
-    // 'FALSE_ALARM' stays same.
     let dbStatus = status;
     if (status === 'RESOLVED') dbStatus = 'VALIDATED' as any;
 
@@ -220,7 +201,6 @@ export class DashboardService {
     }
   }
 
-  // Legacy wrapper
   async resolveAlert(alertId: string) {
     return this.verifyAlert(alertId, 'RESOLVED');
   }

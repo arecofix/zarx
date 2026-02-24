@@ -108,16 +108,25 @@ import { DatePipe } from '@angular/common';
                         (click)="reject(report)"
                         class="flex items-center justify-center gap-2 p-2 bg-slate-900/50 hover:bg-slate-700 border border-slate-700 rounded-lg text-slate-400 hover:text-red-400 transition-all text-xs font-bold"
                      >
-                        🚫 RECHAZAR
+                        🚫 {{ report.status === 'VALIDATED' || report.status === 'OPEN' ? 'FALSA ALARMA' : 'RECHAZAR' }}
                      </button>
 
                      <!-- Validate (Resolve) -->
-                     <button 
-                        (click)="validate(report)"
-                        class="flex items-center justify-center gap-2 p-2 bg-emerald-600/20 hover:bg-emerald-600/40 border border-emerald-500/50 hover:border-emerald-400 rounded-lg text-emerald-400 hover:text-white transition-all text-xs font-bold"
-                     >
-                        ✅ APROBAR
-                     </button>
+                     @if (report.status === 'PENDING') {
+                        <button 
+                           (click)="validate(report)"
+                           class="flex items-center justify-center gap-2 p-2 bg-emerald-600/20 hover:bg-emerald-600/40 border border-emerald-500/50 hover:border-emerald-400 rounded-lg text-emerald-400 hover:text-white transition-all text-xs font-bold"
+                        >
+                           ✅ APROBAR
+                        </button>
+                     } @else {
+                        <button 
+                           (click)="resolve(report)"
+                           class="flex items-center justify-center gap-2 p-2 bg-blue-600/20 hover:bg-blue-600/40 border border-blue-500/50 hover:border-blue-400 rounded-lg text-blue-400 hover:text-white transition-all text-xs font-bold"
+                        >
+                           🏁 FINALIZAR
+                        </button>
+                     }
 
                   </div>
 
@@ -148,7 +157,7 @@ import { DatePipe } from '@angular/common';
             @if (!reportService.isLoadingReports()) {
                <div class="flex flex-col items-center justify-center h-64 text-slate-500 opacity-60">
                   <span class="text-4xl mb-2">✅</span>
-                  <p class="text-sm">Todo al día</p>
+                  <p class="text-sm">Sin alertas activas</p>
                </div>
             }
          }
@@ -191,10 +200,20 @@ export class IncomingFeedComponent implements OnInit {
   }
 
   async reject(report: Report) { 
-     if (confirm('¿Marcar como Falsa Alarma/Rechazar?')) {
-        await this.reportService.rejectReport(report.id);
+     const msg = report.status === 'VALIDATED' ? '¿Marcar como Falsa Alarma (estaba validado)?' : '¿Rechazar reporte?';
+     if (confirm(msg)) {
+        const reason = prompt('Motivo del rechazo (opcional):') || undefined;
+        // If it was validated, we mark as False Alarm effectively cancelling it from public view
+        await this.reportService.rejectReport(report.id, reason);
      }
   }
+
+  async resolve(report: Report) {
+      if (confirm('¿Marcar incidente como FINALIZADO/RESUELTO?')) {
+          await this.reportService.resolveReport(report.id);
+      }
+  }
+
   isVideo(url: string): boolean {
     const lower = url.toLowerCase();
     return lower.endsWith('.mp4') || lower.endsWith('.webm') || lower.endsWith('.mov');

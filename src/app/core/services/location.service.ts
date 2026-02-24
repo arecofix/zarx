@@ -4,6 +4,7 @@ import { Geolocation, Position, GeolocationOptions } from '@capacitor/geolocatio
 import { Capacitor } from '@capacitor/core';
 
 import { AppConstants } from '../constants/app.constants';
+import { Logger } from '../utils/logger';
 
 const C = AppConstants.CONFIG.LOCATION;
 
@@ -145,7 +146,7 @@ export class LocationService {
         (err) => {
           // Silent failure for high accuracy if we have low accuracy fallback
           if (enableHighAccuracy) {
-             console.log('📍 High accuracy timed out, trying standard accuracy...');
+             Logger.debug('📍 High accuracy timed out, trying standard accuracy...');
           } else {
              console.warn('📍 Standard location also failed:', err.message);
           }
@@ -157,7 +158,7 @@ export class LocationService {
   }
 
   private getDevFallback(): Position {
-       console.info('ℹ️ Modo Desarrollo: Utilizando ubicación simulada (Falla de GPS)');
+       Logger.info('ℹ️ Modo Desarrollo: Utilizando ubicación simulada (Falla de GPS)');
         return {
             timestamp: Date.now(),
             coords: {

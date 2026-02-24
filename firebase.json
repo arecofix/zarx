@@ -45,7 +45,7 @@
         "headers": [
           {
             "key": "Cache-Control",
-            "value": "public, max-age=86400"
+            "value": "no-cache"
           }
         ]
       },
@@ -88,7 +88,7 @@
           },
           {
             "key": "Permissions-Policy",
-            "value": "geolocation=(self), camera=(self), microphone=()"
+            "value": "geolocation=(self), camera=(self), microphone=(), attribution-reporting=(self \"https://www.facebook.com\" \"https://connect.facebook.net\"), run-ad-auction=(self \"https://www.facebook.com\" \"https://connect.facebook.net\"), join-ad-interest-group=(self \"https://www.facebook.com\" \"https://connect.facebook.net\"), browsing-topics=(self \"https://www.facebook.com\" \"https://connect.facebook.net\")"
           },
           {
             "key": "Strict-Transport-Security",

@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.app.json",
+  "compilerOptions": {
+    "outDir": "./out-tsc/server",
+    "types": ["node"]
+  },
+  "files": [
+    "src/main.server.ts",
+    "server.ts"
+  ],
+  "angularCompilerOptions": {
+    "entryModule": "src/app/app.server.module#AppServerModule" // This might be ignored for standalone but keeping just in case or removing if standalone only
+  }
+}

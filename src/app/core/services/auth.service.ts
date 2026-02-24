@@ -1,6 +1,7 @@
 import { Injectable, computed, inject, signal, effect, Injector } from '@angular/core';
 import { Router } from '@angular/router';
 import { SupabaseService } from './supabase.service';
+import { Logger } from '../utils/logger';
 import { Session, User, AuthChangeEvent } from '@supabase/supabase-js';
 import { Capacitor } from '@capacitor/core';
 
@@ -117,6 +118,7 @@ export class AuthService {
 
   async signInWithEmail(email: string) {
     const redirectUrl = `${window.location.origin}/inicio`;
+    Logger.debug('[Auth] Email Redirect URL:', redirectUrl);
     
     return this.supabase.auth.signInWithOtp({
       email,
@@ -135,6 +137,7 @@ export class AuthService {
 
   async signUp(email: string, password: string, metadata: { full_name: string; phone?: string; username: string }) {
     const redirectUrl = `${window.location.origin}/inicio`;
+    Logger.debug('[Auth] SignUp Redirect URL:', redirectUrl);
     
     return this.supabase.auth.signUp({
       email,
@@ -157,7 +160,9 @@ export class AuthService {
     }
 
     // Dynamic Redirect URL based on current environment
+    // Note: This URL must be whitelisted in Supabase Dashboard > Authentication > URL Configuration
     const redirectUrl = `${window.location.origin}/inicio`;
+    Logger.debug('[Auth] OAuth Redirect URL:', redirectUrl);
 
     return this.supabase.auth.signInWithOAuth({
       provider,

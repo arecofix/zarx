@@ -2,7 +2,6 @@ import { Component, OnInit, OnDestroy, inject, signal, NgZone } from '@angular/c
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import * as L from 'leaflet';
 import { ZoneService, Zone } from '../../services/zone.service';
 
 @Component({
@@ -10,7 +9,7 @@ import { ZoneService, Zone } from '../../services/zone.service';
   standalone: true,
   imports: [CommonModule, FormsModule],
   template: `
-    <div class="relative w-screen h-screen bg-slate-950 overflow-hidden flex">
+    <div class="relative w-screen h-dvh bg-slate-950 overflow-hidden flex">
       
       <!-- TOGGLE SIDEBAR BUTTON (Mobile Only) -->
       <button *ngIf="!sidebarOpen()" (click)="toggleSidebar()" 
@@ -158,9 +157,9 @@ export class ZoneEditorComponent implements OnInit, OnDestroy {
   private ngZone = inject(NgZone);
   private router = inject(Router);
 
-  map!: L.Map;
-  drawControl!: any; // L.Control.Draw types might be tricky
-  drawnItems = new L.FeatureGroup();
+  map!: any;
+  drawControl!: any; 
+  drawnItems: any;
   
   zones = signal<any[]>([]);
   isLoading = signal(false);
@@ -175,6 +174,8 @@ export class ZoneEditorComponent implements OnInit, OnDestroy {
   };
 
   sidebarOpen = signal(true);
+  
+  private L: any;
 
   goToDashboard() {
     this.router.navigate(['/admin/dashboard']);
@@ -206,11 +207,18 @@ export class ZoneEditorComponent implements OnInit, OnDestroy {
       this.initMap();
     });
     
-    await this.loadZones();
-    this.isLoading.set(false);
+    // We can load zones in parallel, but need to wait for map to add layers?
+    // Actually initMap is async now.
   }
 
-  private initMap(): void {
+  private async initMap() {
+    // Dynamic Imports
+    this.L = await import('leaflet');
+    await import('leaflet-draw');
+    const L = this.L;
+
+    this.drawnItems = new L.FeatureGroup();
+
     // Basic Map Init - Centered on Arecofix aprox
     this.map = L.map('zoneMap', {
        center: [-34.6037, -58.3816], // Buenos Aires Default
@@ -264,8 +272,7 @@ export class ZoneEditorComponent implements OnInit, OnDestroy {
     // Event Handling
     this.map.on(L.Draw.Event.CREATED, (e: any) => {
         const layer = e.layer;
-        const type = e.layerType;
-
+        
         this.ngZone.run(() => {
            this.currentLayer = layer;
            this.newZone.type = 'DANGER'; // Default to Danger
@@ -273,6 +280,10 @@ export class ZoneEditorComponent implements OnInit, OnDestroy {
            this.showModal.set(true);
         });
     });
+
+    // Load Zones after map init
+    await this.loadZones();
+    this.ngZone.run(() => this.isLoading.set(false));
   }
 
   async loadZones() {
@@ -280,14 +291,17 @@ export class ZoneEditorComponent implements OnInit, OnDestroy {
     this.zones.set(zones.map((l: any) => l.feature?.properties));
     
     // Add to map
-    this.drawnItems.clearLayers(); // Clear duplicate local layers if any
-    zones.forEach(layer => {
-        this.drawnItems.addLayer(layer);
-    });
+    if (this.drawnItems) {
+        this.drawnItems.clearLayers(); 
+        zones.forEach(layer => {
+            this.drawnItems.addLayer(layer);
+        });
+    }
   }
 
   async saveZone() {
-    if (!this.currentLayer) return;
+    if (!this.currentLayer || !this.L) return;
+    const L = this.L;
 
     this.isLoading.set(true);
     try {

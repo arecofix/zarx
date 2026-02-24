@@ -4,11 +4,11 @@ export const AppConstants = {
   // System Configuration
   CONFIG: {
     LOCATION: {
-      TIMEOUT_HIGH_ACCURACY: 30000,
-      TIMEOUT_LOW_ACCURACY: 45000,
-      MAX_AGE_HIGH: 10000,
-      MAX_AGE_LOW: 120000,
-      CACHE_VALIDITY: 60000,
+      TIMEOUT_HIGH_ACCURACY: 15000,  // Reduced from 30s to 15s for faster fallback
+      TIMEOUT_LOW_ACCURACY: 30000,   // Reduced from 45s to 30s
+      MAX_AGE_HIGH: 30000,           // Increased from 10s to 30s - accept slightly older positions
+      MAX_AGE_LOW: 300000,           // Increased from 120s to 300s (5 minutes)
+      CACHE_VALIDITY: 120000,        // Increased from 60s to 120s (2 minutes)
       DEFAULT_LAT: -34.7709,
       DEFAULT_LNG: -58.8335
     },

@@ -111,7 +111,7 @@ export class NotificationService {
             if (typeof navigator !== 'undefined' && navigator.vibrate) {
               navigator.vibrate([50, 50, 50]); // Short vibe
             }
-            new Audio('assets/sounds/notification_pop.mp3').play().catch(() => {}); 
+            new Audio('assets/sounds/beep.alert.mp3').play().catch(() => {}); 
           } catch(e) {}
         }
       )

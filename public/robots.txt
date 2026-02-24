@@ -35,7 +35,7 @@ Allow: /auth/login
 Allow: /auth/register
 
 # Sitemap
-Sitemap: https://zarx.arecofix.com.ar/sitemap.xml
+Sitemap: https://www.arecofix.com.ar/sitemap.xml
 
 # Crawl-delay para bots agresivos (en segundos)
 Crawl-delay: 1

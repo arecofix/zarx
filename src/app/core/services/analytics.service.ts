@@ -1,4 +1,4 @@
-import { Injectable, inject, signal } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { SupabaseService } from './supabase.service';
 
 export interface Hotspot {
@@ -32,49 +32,67 @@ export class AnalyticsService {
   private supabase = inject(SupabaseService).client;
 
   /**
-   * Get clustered hotspots for map visualization
+   * Get clustered hotspots for map visualization.
+   * NOTE: Requires `get_hotspots` RPC function in Supabase.
    */
   async getHotspots(hoursAgo: number = 168): Promise<Hotspot[]> {
-    const { data, error } = await this.supabase
-      .rpc('get_hotspots', { hours_ago: hoursAgo });
-      
-    if (error) {
-      console.error('Error fetching hotspots:', error);
+    try {
+      const { data, error } = await this.supabase
+        .rpc('get_hotspots', { hours_ago: hoursAgo });
+
+      if (error) {
+        console.warn('[Analytics] get_hotspots not available:', error.message);
+        return [];
+      }
+      return data || [];
+    } catch (e) {
+      console.warn('[Analytics] get_hotspots failed:', e);
       return [];
     }
-    return data || [];
   }
 
   /**
-   * Calculate local security index for a user position
+   * Calculate local security index for a user position.
+   * NOTE: Requires `calculate_security_index` RPC function in Supabase.
    */
   async getSecurityIndex(lat: number, lng: number): Promise<SecurityIndex | null> {
-    const { data, error } = await this.supabase
-      .rpc('calculate_security_index', { 
-        user_lat: lat, 
-        user_lng: lng,
-        radius_km: 2.0 
-      });
+    try {
+      const { data, error } = await this.supabase
+        .rpc('calculate_security_index', {
+          user_lat: lat,
+          user_lng: lng,
+          radius_km: 2.0
+        });
 
-    if (error) {
-       console.error('Error calculating security index:', error);
-       return null;
+      if (error) {
+        console.warn('[Analytics] calculate_security_index not available:', error.message);
+        return null;
+      }
+      return data;
+    } catch (e) {
+      console.warn('[Analytics] calculate_security_index failed:', e);
+      return null;
     }
-    return data;
   }
 
   /**
-   * Get hourly risk statistics for charts
+   * Get hourly risk statistics for charts.
+   * NOTE: Requires `hourly_risk_stats` view/table in Supabase.
    */
   async getHourlyRiskStats(): Promise<HourlyRisk[]> {
-    const { data, error } = await this.supabase
-      .from('hourly_risk_stats')
-      .select('*');
+    try {
+      const { data, error } = await this.supabase
+        .from('hourly_risk_stats')
+        .select('*');
 
-    if (error) {
-      console.error('Error fetching hourly stats:', error);
+      if (error) {
+        console.warn('[Analytics] hourly_risk_stats not available:', error.message);
+        return [];
+      }
+      return data || [];
+    } catch (e) {
+      console.warn('[Analytics] hourly_risk_stats failed:', e);
       return [];
     }
-    return data || [];
   }
 }

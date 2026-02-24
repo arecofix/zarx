@@ -5,6 +5,7 @@ import { AuthService } from './auth.service';
 import { ToastService } from './toast.service';
 import { AppConstants } from '../constants/app.constants';
 import { ReportType } from '../models';
+import { Logger } from '../utils/logger';
 
 // Domain Entity / Command
 export interface SosCommand {
@@ -117,7 +118,7 @@ export class SosService {
    */
   private async sendWithRetry(command: SosCommand, descPrefix: string = '', attempt = 1, maxAttempts = 5): Promise<void> {
     try {
-      console.log(`SOS Attempt ${attempt}/${maxAttempts}`);
+      Logger.debug(`SOS Attempt ${attempt}/${maxAttempts}`);
       
       const { error } = await this.supabase.from('emergencies').insert({
         user_id: command.userId,

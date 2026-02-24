@@ -2,6 +2,7 @@ import { Injectable, inject, signal, effect, Injector } from '@angular/core';
 import { SupabaseService } from './supabase.service';
 import { AuthService } from './auth.service';
 import { LocationService } from './location.service';
+import { Logger } from '../utils/logger';
 
 @Injectable({
   providedIn: 'root'
@@ -97,7 +98,7 @@ export class TrackingService {
        .eq('id', sessionId);
      
      if (error) console.error('Tracking update failed', error);
-     else console.log('[Tracking] Synced to Cloud:', lat, lng);
+     else Logger.debug('[Tracking] Synced to Cloud:', lat, lng);
   }
   
   getShareUrl(sessionId: string): string {

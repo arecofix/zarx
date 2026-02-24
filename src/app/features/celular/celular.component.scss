@@ -1,0 +1,10 @@
+/* Tailwind CSS should handle most styling, but specific overrides go here */
+:host {
+  display: block;
+}
+
+/* Ensure smooth transitions for interactive elements */
+a,
+button {
+  transition: all 0.2s ease-in-out;
+}

@@ -1,4 +1,5 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
+import { ReputationService, ReputationRankInfo } from './reputation.service';
 
 export interface Rank {
   name: string;
@@ -10,46 +11,22 @@ export interface Rank {
   nextRankName?: string;
 }
 
+/**
+ * Gamification facade that delegates to ReputationService for rank data.
+ * Provides progress calculation and rank access with UI-friendly labels.
+ */
 @Injectable({
   providedIn: 'root'
 })
 export class GamificationService {
-  
-  private RANKS: Rank[] = [
-    { 
-      name: 'OBSERVADO', 
-      minScore: 0, 
-      maxScore: 300, 
-      color: 'red-500', 
-      icon: '👁️', 
-      benefit: 'Reportes requieren doble validación',
-      nextRankName: 'CIUDADANO' 
-    },
-    { 
-      name: 'CIUDADANO', 
-      minScore: 301, 
-      maxScore: 700, 
-      color: 'blue-400', 
-      icon: '🛡️', 
-      benefit: 'Acceso estándar a monitoreo',
-      nextRankName: 'VIGÍA' 
-    },
-    { 
-      name: 'VIGÍA', 
-      minScore: 701, 
-      maxScore: 1000, 
-      color: 'emerald-400', 
-      icon: '🦅', 
-      benefit: 'Prioridad de Alerta + Ícono Especial',
-      nextRankName: undefined
-    }
-  ];
+  private reputation = inject(ReputationService);
 
   calculateProgress(score: number) {
-    const rank = this.getRank(score);
-    const nextRank = this.RANKS.find(r => r.name === rank.nextRankName);
+    const rankInfo = this.reputation.getRankInfo(score);
+    const rank = this.toRank(rankInfo);
+    const nextRankName = this.getNextRankName(rankInfo.rank);
 
-    if (!nextRank) {
+    if (!nextRankName) {
        // Max Level
        return {
          currentRank: rank,
@@ -64,7 +41,7 @@ export class GamificationService {
     const percent = Math.min(100, Math.max(0, (progress / range) * 100));
 
     return {
-      currentRank: rank,
+      currentRank: { ...rank, nextRankName },
       progressPercent: Math.round(percent),
       pointsToNext: rank.maxScore - score + 1,
       isMaxLevel: false
@@ -72,6 +49,36 @@ export class GamificationService {
   }
 
   getRank(score: number): Rank {
-    return this.RANKS.find(r => score >= r.minScore && score <= r.maxScore) || this.RANKS[0];
+    return this.toRank(this.reputation.getRankInfo(score));
+  }
+
+  private toRank(info: ReputationRankInfo): Rank {
+    return {
+      name: info.label,
+      minScore: info.minScore,
+      maxScore: info.maxScore,
+      color: info.color,
+      icon: info.icon,
+      benefit: this.getBenefit(info.rank)
+    };
+  }
+
+  private getBenefit(rank: string): string {
+    switch (rank) {
+      case 'SOSPECHOSO': return 'Acceso restringido';
+      case 'OBSERVADO': return 'Reportes requieren doble validación';
+      case 'CIUDADANO_MODELO': return 'Acceso estándar a monitoreo';
+      case 'VIGILANTE': return 'Prioridad de Alerta + Ícono Especial';
+      default: return '';
+    }
+  }
+
+  private getNextRankName(rank: string): string | undefined {
+    switch (rank) {
+      case 'SOSPECHOSO': return 'Observado';
+      case 'OBSERVADO': return 'Ciudadano Modelo';
+      case 'CIUDADANO_MODELO': return 'Vigilante';
+      default: return undefined;
+    }
   }
 }

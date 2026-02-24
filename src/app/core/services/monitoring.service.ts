@@ -4,6 +4,7 @@ import { RealtimeChannel } from '@supabase/supabase-js';
 import { ToastService } from './toast.service';
 import { AudioService } from './audio.service';
 import { Profile } from '../models';
+import { Logger } from '../utils/logger';
 
 export interface Emergency {
   id: string;
@@ -75,7 +76,7 @@ export class MonitoringService {
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'emergencies' },
         async (payload) => {
-          console.log('🚨 NEW EMERGENCY DETECTED:', payload);
+          Logger.debug('🚨 NEW EMERGENCY DETECTED:', payload);
           await this.handleNewEmergency(payload.new);
         }
       )

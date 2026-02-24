@@ -1,5 +1,6 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { SupabaseService } from './supabase.service';
+import { Logger } from '../utils/logger';
 import { HeatmapPoint, ActiveHeatmapData } from '../models';
 
 @Injectable({
@@ -176,7 +177,7 @@ export class HeatmapService {
           table: 'alerts'
         },
         (payload) => {
-          console.log('Alert change detected, refreshing heatmap:', payload);
+          Logger.debug('Alert change detected, refreshing heatmap:', payload);
           this.refreshHeatmap();
           callback();
         }

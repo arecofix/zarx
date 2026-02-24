@@ -6,12 +6,12 @@ importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-comp
 
 // Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyAhLGOQVJXuQqKQcNZqKcJQrKmWJYOQvKQ",
+  apiKey: "AIzaSyBLhy5ibJ-5bPBt7s992Rxt47dD9TMegrI",
   authDomain: "zarx-arecofix.firebaseapp.com",
   projectId: "zarx-arecofix",
   storageBucket: "zarx-arecofix.firebasestorage.app",
-  messagingSenderId: "1049867730734",
-  appId: "1:1049867730734:web:c8e4c0e0a9e5e5e5e5e5e5"
+  messagingSenderId: "887092289607",
+  appId: "1:887092289607:web:48a16740eacfd875df1162"
 };
 
 // Initialize Firebase

@@ -13,7 +13,7 @@ import { Profile } from '../../../../core/models';
   standalone: true,
   imports: [CommonModule, FormsModule, RouterModule],
   template: `
-    <div class="p-6 bg-slate-950 min-h-full font-sans text-slate-300">
+    <div class="p-6 bg-slate-950 min-h-full font-sans text-slate-300 relative">
       
       <!-- HEADER -->
       <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
@@ -23,10 +23,10 @@ import { Profile } from '../../../../core/models';
           </a>
           <div>
             <h2 class="text-2xl font-black text-white tracking-tight flex items-center gap-2">
-              <span>👥</span> GESTIÓN
+              <span>👥</span> GESTIÓN DE USUARIOS
             </h2>
             <p class="text-xs text-slate-400 uppercase tracking-widest mt-1">
-              Control de usuarios y privilegios
+              Control de roles y perfiles
             </p>
           </div>
         </div>
@@ -50,7 +50,7 @@ import { Profile } from '../../../../core/models';
       <!-- DATA GRID -->
       <div class="bg-slate-900/50 border border-slate-800 rounded-xl overflow-hidden shadow-2xl backdrop-blur-sm">
         
-        <!-- Toolbar / Stats -->
+        <!-- Toolbar -->
         <div class="px-6 py-4 border-b border-slate-800 flex items-center gap-4 bg-slate-900/80">
            <div class="flex items-center gap-2">
              <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
@@ -70,8 +70,8 @@ import { Profile } from '../../../../core/models';
             <thead class="bg-slate-950/50 text-slate-400 uppercase text-[10px] tracking-wider font-bold">
               <tr>
                 <th class="px-6 py-3">Usuario</th>
-                <th class="px-6 py-3">Rol Actual</th>
-                <th class="px-6 py-3">Estado</th>
+                <th class="px-6 py-3">Rol</th>
+                <th class="px-6 py-3">Teléfono</th>
                 <th class="px-6 py-3 text-right">Acciones</th>
               </tr>
             </thead>
@@ -83,72 +83,40 @@ import { Profile } from '../../../../core/models';
                   <td class="px-6 py-4">
                     <div class="flex items-center gap-3">
                       <div class="w-10 h-10 rounded-full bg-slate-800 border border-slate-700 overflow-hidden shrink-0">
-                         @if (user.avatar_url) {
-                           <img [src]="user.avatar_url" class="w-full h-full object-cover">
-                         } @else {
-                           <div class="w-full h-full flex items-center justify-center text-slate-500 font-bold text-xs">
-                             {{ getInitials(user) }}
-                           </div>
-                         }
+                         <img [src]="user.avatar_url || 'assets/images/placeholder_avatar.png'" class="w-full h-full object-cover">
                       </div>
                       <div>
                         <div class="font-bold text-white">{{ user.full_name || 'Sin Nombre' }}</div>
                         <div class="text-xs text-slate-500 font-mono">{{ user.email }}</div>
-                        <div class="text-[10px] text-slate-600">{{ user.username || '@anon' }}</div>
                       </div>
                     </div>
                   </td>
 
-                  <!-- Role Badge (Editable) -->
+                  <!-- Role Badge -->
                   <td class="px-6 py-4">
-                     <!-- If Editing this Row -->
-                     @if (editingUserId() === user.id) {
-                        <div class="flex items-center gap-2 animate-fade-in">
-                          <select 
-                            #roleSelect
-                            [value]="user.role || 'user'"
-                            (change)="onRoleChange(user, roleSelect.value)"
-                            [disabled]="isProcessing() || isSelf(user.id)"
-                            class="bg-slate-950 border border-blue-500 text-white text-xs rounded-md py-1 px-2 focus:outline-none"
-                          >
-                            <option value="user">User</option>
-                            <option value="moderator">Moderator</option>
-                            <option value="admin">Admin</option>
-                          </select>
-                          <button (click)="cancelEdit()" class="text-slate-400 hover:text-white px-1">✕</button>
-                        </div>
-                     } @else {
-                        <!-- Badge -->
-                        <span 
-                          (click)="startEdit(user)"
-                          class="px-2.5 py-1 rounded-full text-[10px] font-bold border cursor-pointer hover:opacity-80 transition-opacity select-none inline-flex items-center gap-1"
-                          [ngClass]="getRoleBadgeClass(user.role)"
-                          title="Clic para editar rol"
-                        >
-                          {{ user.role | uppercase }}
-                          <svg class="w-3 h-3 opacity-50 group-hover:opacity-100" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
-                        </span>
-                     }
+                     <span 
+                       class="px-2.5 py-1 rounded-full text-[10px] font-bold border inline-flex items-center gap-1"
+                       [ngClass]="getRoleBadgeClass(user.role)"
+                     >
+                       {{ user.role | uppercase }}
+                     </span>
                   </td>
 
-                  <!-- Status -->
-                  <td class="px-6 py-4">
-                    <span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-bold">
-                       <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                       ACTIVO
-                    </span>
+                  <!-- Phone -->
+                  <td class="px-6 py-4 text-slate-400 font-mono text-xs">
+                    {{ user.phone || '-' }}
                   </td>
 
                   <!-- Actions -->
                   <td class="px-6 py-4 text-right">
                      <button 
-                       (click)="startEdit(user)" 
-                       class="text-slate-400 hover:text-blue-400 transition-colors p-2 rounded-lg hover:bg-slate-800"
+                       (click)="openEditModal(user)" 
+                       class="text-blue-400 hover:text-white bg-blue-500/10 hover:bg-blue-600 transition-colors px-3 py-1.5 rounded-lg text-xs font-bold border border-blue-500/20"
                        title="Editar Usuario"
                        [disabled]="isSelf(user.id)"
-                       [class.opacity-20]="isSelf(user.id)"
+                       [class.opacity-50]="isSelf(user.id)"
                      >
-                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                        EDITAR
                      </button>
                   </td>
 
@@ -164,9 +132,83 @@ import { Profile } from '../../../../core/models';
           </table>
         </div>
       </div>
+
+      <!-- EDIT MODAL -->
+      @if (selectedUser()) {
+        <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+           <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-scale-up">
+              
+              <!-- Modal Header -->
+              <div class="p-6 border-b border-slate-800 flex justify-between items-center bg-slate-950/50">
+                 <h3 class="text-lg font-bold text-white">Editar Usuario</h3>
+                 <button (click)="closeEditModal()" class="text-slate-400 hover:text-white transition-colors">✕</button>
+              </div>
+
+              <!-- Modal Body -->
+              <div class="p-6 space-y-4">
+                 
+                 <div class="flex items-center gap-4 mb-4">
+                    <div class="w-16 h-16 rounded-full bg-slate-800 overflow-hidden border-2 border-slate-700">
+                       <img [src]="selectedUser()?.avatar_url || 'assets/images/placeholder_avatar.png'" class="w-full h-full object-cover">
+                    </div>
+                    <div>
+                       <div class="text-white font-bold">{{ selectedUser()?.full_name }}</div>
+                       <div class="text-xs text-slate-500">{{ selectedUser()?.email }}</div>
+                       <div class="text-[10px] text-slate-600 font-mono mt-1">ID: {{ selectedUser()?.id | slice:0:8 }}</div>
+                    </div>
+                 </div>
+
+                 <!-- Role Selector -->
+                 <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Rol del Sistema</label>
+                    <div class="grid grid-cols-2 gap-2">
+                       @for (role of availableRoles; track role.value) {
+                          <button 
+                             (click)="setRole(role.value)"
+                             class="p-3 rounded-lg border text-xs font-bold transition-all text-left flex flex-col gap-1"
+                             [class.bg-blue-600_20]="tempRole() === role.value"
+                             [class.border-blue-500]="tempRole() === role.value"
+                             [class.text-blue-400]="tempRole() === role.value"
+                             [class.bg-slate-800]="tempRole() !== role.value"
+                             [class.border-slate-700]="tempRole() !== role.value"
+                             [class.text-slate-400]="tempRole() !== role.value"
+                          >
+                             <span class="uppercase">{{ role.label }}</span>
+                             <span class="text-[10px] font-normal opacity-70">{{ role.desc }}</span>
+                          </button>
+                       }
+                    </div>
+                 </div>
+
+              </div>
+
+              <!-- Modal Footer -->
+              <div class="p-4 bg-slate-950/50 border-t border-slate-800 flex justify-end gap-3">
+                 <button (click)="closeEditModal()" class="px-4 py-2 rounded-lg text-slate-400 hover:text-white text-xs font-bold hover:bg-slate-800 transition-colors">CANCELAR</button>
+                 <button 
+                    (click)="saveChanges()" 
+                    [disabled]="isProcessing() || tempRole() === selectedUser()?.role"
+                    class="px-6 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold shadow-lg shadow-blue-900/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
+                 >
+                    @if (isProcessing()) {
+                       <svg class="animate-spin h-3 w-3" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    }
+                    GUARDAR CAMBIOS
+                 </button>
+              </div>
+
+           </div>
+        </div>
+      }
       
     </div>
-  `
+  `,
+  styles: [`
+    .animate-fade-in { animation: fadeIn 0.2s ease-out; }
+    .animate-scale-up { animation: scaleUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes scaleUp { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  `]
 })
 export class UserManagementComponent implements OnInit {
   userService = inject(UserService);
@@ -174,10 +216,17 @@ export class UserManagementComponent implements OnInit {
   toastService = inject(ToastService);
 
   searchTerm = signal('');
-  editingUserId = signal<string | null>(null);
+  selectedUser = signal<Profile | null>(null);
+  tempRole = signal<string>('civilian');
   isProcessing = signal(false);
 
-  // Computed Users List with Filter
+  availableRoles = [
+    { value: 'civilian', label: 'Civil', desc: 'Usuario estándar' },
+    { value: 'responder', label: 'Respondedor', desc: 'Acceso a moderación básica' },
+    { value: 'military', label: 'Fuerza', desc: 'Acceso táctico' },
+    { value: 'admin', label: 'Admin', desc: 'Control total del sistema' }
+  ];
+
   filteredUsers = computed(() => {
     const term = this.searchTerm().toLowerCase();
     const all = this.userService.users();
@@ -194,56 +243,51 @@ export class UserManagementComponent implements OnInit {
     this.userService.fetchAllUsers();
   }
 
-  getInitials(user: Profile): string {
-    if (user.full_name) {
-      return user.full_name.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase();
-    }
-    return user.email?.substring(0,2).toUpperCase() || '??';
-  }
-
-  getRoleBadgeClass(role: string = 'user') {
-    switch (role) {
-      case 'admin':
-        return 'bg-red-500/10 text-red-500 border-red-500/50';
-      case 'moderator':
-        return 'bg-blue-500/10 text-blue-400 border-blue-500/50';
-      case 'responder': // Map legacy responder to Mod look for now
-        return 'bg-indigo-500/10 text-indigo-400 border-indigo-500/50';
-      case 'military': 
-        return 'bg-emerald-600/10 text-emerald-500 border-emerald-600/50';
-      default: // user / civilian
-        return 'bg-slate-700/30 text-slate-400 border-slate-600';
-    }
-  }
-
   isSelf(userId: string): boolean {
     return this.authService.currentUser()?.id === userId;
   }
 
-  startEdit(user: Profile) {
+  getRoleBadgeClass(role: string = 'civilian') {
+    switch (role) {
+      case 'admin': return 'bg-red-500/10 text-red-500 border-red-500/50';
+      case 'responder': return 'bg-blue-500/10 text-blue-400 border-blue-500/50';
+      case 'military': return 'bg-emerald-600/10 text-emerald-500 border-emerald-600/50';
+      default: return 'bg-slate-700/30 text-slate-400 border-slate-600';
+    }
+  }
+
+  openEditModal(user: Profile) {
     if (this.isSelf(user.id)) {
-      this.toastService.warning('No puedes editar tu propio rol para evitar bloqueos accidentales.');
+      this.toastService.warning('No puedes editar tu propio rol.');
       return;
     }
-    this.editingUserId.set(user.id);
+    this.selectedUser.set(user);
+    this.tempRole.set(user.role || 'civilian');
   }
 
-  cancelEdit() {
-    this.editingUserId.set(null);
+  closeEditModal() {
+    this.selectedUser.set(null);
   }
 
-  async onRoleChange(user: Profile, newRole: string) {
-    if (!newRole) return;
+  setRole(role: string) {
+    this.tempRole.set(role);
+  }
+
+  async saveChanges() {
+    const user = this.selectedUser();
+    const newRole = this.tempRole();
+    
+    if (!user || !newRole) return;
     
     this.isProcessing.set(true);
     
     const success = await this.userService.updateUserRole(user.id, newRole);
     
     if (success) {
-      this.toastService.success(`Rol de ${user.email} actualizado a ${newRole.toUpperCase()}`);
-      this.editingUserId.set(null);
+      this.toastService.success(`Rol actualizado a ${newRole.toUpperCase()}`);
+      this.closeEditModal();
     } else {
-      this.toastService.error('Error actualizando rol. Verifica permisos.');
+      this.toastService.error('Error al actualizar rol. Verifica la consola.');
     }
     
     this.isProcessing.set(false);

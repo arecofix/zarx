@@ -1,46 +1,46 @@
-import { Component, OnInit, signal, Inject, PLATFORM_ID, inject, ViewChild, Injector, effect } from '@angular/core';
+import { Component, OnInit, signal, Inject, PLATFORM_ID, inject, ViewChild, Injector, effect, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common'; 
 import { Router } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 import { MapComponent } from './components/map/map.component';
-import { NewsTickerComponent } from './components/news-ticker/news-ticker.component';
-import { BottomSheetComponent } from './components/bottom-sheet/bottom-sheet.component';
+import { CriticalAlertBarComponent } from './components/critical-alert-bar/critical-alert-bar.component';
+import { NetworkNewsSheetComponent } from './components/network-news-sheet/network-news-sheet.component';
+import { CommunityCarouselComponent, CommunityItem } from './components/community-carousel/community-carousel.component';
 import { OnboardingOverlayComponent } from './components/onboarding-overlay/onboarding-overlay.component';
 import { OnboardingComponent } from '../auth/components/onboarding/onboarding.component';
 import { ReportsMenuComponent } from './components/reports-menu/reports-menu.component';
 import { ToastNotificationComponent } from '../../shared/components/toast-notification/toast-notification.component';
-import { NewsItem } from './models/home.models';
 import { AppConstants } from '../../core/constants/app.constants';
-import { AlertService } from '../../core/services/alert.service';
 import { LocationService } from '../../core/services/location.service';
 import { ToastService } from '../../core/services/toast.service';
-import { ReportType } from '../../core/models';
+import { ReportType, Report } from '../../core/models';
 import { ReportService } from '../../core/services/report.service';
 import { PwaService } from '../../core/services/pwa.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { PanicButtonComponent } from '../../shared/components/panic-button/panic-button.component';
-import { NewsService } from '../../core/services/news.service';
-import { NearbyAlertNotificationComponent } from './components/nearby-alert-notification/nearby-alert-notification.component';
 import { ReportWizardComponent } from './components/report-wizard/report-wizard.component';
+import { Logger } from '../../core/utils/logger';
+import { HomeUseCase } from './application/home.usecase';
 
 @Component({
   selector: 'app-home',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     CommonModule, 
     MapComponent, 
-    NewsTickerComponent, 
-    BottomSheetComponent, 
+    CriticalAlertBarComponent,
+    NetworkNewsSheetComponent,
+    CommunityCarouselComponent,
     OnboardingOverlayComponent,
     ReportsMenuComponent,
     ToastNotificationComponent,
     PanicButtonComponent,
     OnboardingComponent,
-    NearbyAlertNotificationComponent,
     ReportWizardComponent
   ],
   template: `
-    <div class="relative w-screen h-screen overflow-hidden bg-slate-950 font-sans select-none">
+    <div class="relative w-screen h-screen overflow-hidden bg-slate-950 font-sans select-none flex flex-col">
       
       <!-- TOAST NOTIFICATIONS (Global for this screen) -->
       <app-toast-notification></app-toast-notification>
@@ -52,34 +52,55 @@ import { ReportWizardComponent } from './components/report-wizard/report-wizard.
         <app-onboarding></app-onboarding>
       }
 
-      <!-- LAYER 1.5: NEARBY ALERTS (Z-60) -->
-       @if (!showOnboarding()) {
-          <app-nearby-alert-notification></app-nearby-alert-notification>
-       }
+      <!-- LAYER 1: ALERTS & INFO STRUCTURE -->
+      @if (!showOnboarding() && !showIdentityOnboarding()) {
+          
+          <!-- 1.1 CRITICAL ALERTS (TOP MOST) -->
+          <div class="fixed top-0 left-0 w-full z-100 pointer-events-auto">
+             <app-critical-alert-bar 
+                [alerts]="homeUseCase.criticalAlerts()" 
+                (alertClicked)="onAlertClick($event)">
+             </app-critical-alert-bar>
+          </div>
 
-      <!-- LAYER 1: HUD TICKER (Z-10) -->
-      @if (!showOnboarding()) {
-         <app-news-ticker [news]="newsItems()" (newsClicked)="onNewsClick($event)"></app-news-ticker>
+
+          <!-- 1.2 NETWORK NEWS / CONTEXT (BELOW CRITICAL) -->
+          <!-- Dynamic positioning: If critical bar active, move down -->
+          <div class="fixed top-0 left-0 right-0 z-90 transition-all duration-300 pointer-events-none" 
+               [class.top-14]="homeUseCase.criticalAlerts().length > 0"
+               [class.sm:top-12]="homeUseCase.criticalAlerts().length > 0">
+              <app-network-news-sheet 
+                 [reports]="homeUseCase.networkReports()" 
+                 (reportClicked)="onAlertClick($event)">
+              </app-network-news-sheet>
+          </div>
       }
 
       <!-- LAYER 2: CONTROLS (Z-20) -->
       @if (!showOnboarding()) {
 
-         <!-- PWA INSTALL BUTTON (Top Center-Left adjusted) -->
+         <!-- PWA INSTALL BUTTON (Top Center-Left) -->
          @if (pwaService.isInstallable()) {
-            <div class="fixed top-20 left-1/2 -translate-x-1/2 z-40 animate-bounce pointer-events-auto">
+            <div class="fixed top-24 left-4 z-80 animate-bounce pointer-events-auto transition-all duration-300"
+                 [class.mt-14]="homeUseCase.criticalAlerts().length > 0"
+                 [class.sm:mt-12]="homeUseCase.criticalAlerts().length > 0">
                <button 
                  (click)="pwaService.installApp()"
-                 class="bg-blue-600/90 backdrop-blur hover:bg-blue-500 text-white font-black text-xs py-2 px-4 rounded-full shadow-[0_0_20px_rgba(37,99,235,0.6)] flex items-center gap-2 border border-blue-400/50 uppercase tracking-widest transition-all active:scale-95"
+                 class="w-10 h-10 rounded-full bg-blue-600/90 flex items-center justify-center text-white shadow-lg border border-blue-400 hover:bg-blue-500 transition-colors"
+                 title="Instalar App"
                >
-                   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                   <span>Instalar App</span>
+                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                </button>
             </div>
+
          }
         
-         <!-- TOP RIGHT CONTROL GROUP (Profile, Notifs, Score) -->
-         <div class="fixed top-14 right-4 z-50 flex flex-col items-end gap-3 pointer-events-none">
+         <!-- TOP RIGHT CONTROL GROUP (Profile, Notifs) -->
+         <!-- Moved slightly down to accommodate alerts -->
+         <div class="fixed top-4 right-4 z-95 flex flex-col items-end gap-3 pointer-events-none transition-all duration-300"
+              [class.mt-14]="homeUseCase.criticalAlerts().length > 0"
+              [class.sm:mt-12]="homeUseCase.criticalAlerts().length > 0">
+
            
            <!-- Combined Interactive Container -->
            <div class="flex items-center gap-2 pointer-events-auto">
@@ -112,7 +133,7 @@ import { ReportWizardComponent } from './components/report-wizard/report-wizard.
 
                       <div class="w-8 h-8 rounded-full bg-slate-800 border-2 border-emerald-600 overflow-hidden relative flex items-center justify-center">
                         @if (!imgLoadError()) {
-                           <img [src]="userAvatar()" alt="User" class="w-full h-full object-cover" (error)="onAvatarError()" />
+                           <img [src]="userAvatar()" alt="Perfil de Usuario" class="w-full h-full object-cover" (error)="onAvatarError()" />
                         } @else {
                            <!-- Fallback Avatar SVG -->
                            <svg xmlns="http://www.w3.org/2000/svg" class="w-full h-full text-slate-400 bg-slate-800 p-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -187,7 +208,8 @@ import { ReportWizardComponent } from './components/report-wizard/report-wizard.
          </div>
 
          <!-- FAB CONTROLS (Map Tools) -->
-         <div class="fixed right-4 top-32 z-30 flex flex-col gap-3 animate-slide-in-right pointer-events-auto">
+         <div class="fixed right-4 top-32 z-30 flex flex-col gap-3 animate-slide-in-right pointer-events-auto"
+               [class.mt-12]="homeUseCase.criticalAlerts().length > 0">
             
             <!-- Recenter -->
             <button (click)="recenterMap()" class="w-10 h-10 rounded-full bg-slate-800/90 border border-slate-600 text-slate-300 flex items-center justify-center shadow-lg hover:bg-emerald-600 hover:text-white hover:border-emerald-500 transition-all active:scale-95" title="Recentrar Mapa">
@@ -234,15 +256,12 @@ import { ReportWizardComponent } from './components/report-wizard/report-wizard.
         </div>
       }
 
-      <!-- LAYER 3: BOTTOM SHEET (Z-30) -->
+      <!-- LAYER 3: COMMUNITY CAROUSEL (BOTTOM FIXED) -->
       @if (!showOnboarding()) {
-         <app-bottom-sheet 
-           [news]="newsItems()" 
-           (validateReport)="handleNeighborValidation($event)" 
-           class="z-30">
-         </app-bottom-sheet>
+         <app-community-carousel (itemClick)="onCarouselItemClick($event)"></app-community-carousel>
       }
       
+      <!-- REPORT MENUS & DIALOGS -->
       @if (showReportMenu()) {
         <app-reports-menu 
            [isLoading]="reportService.isSending()"
@@ -289,8 +308,8 @@ export class HomeComponent implements OnInit {
   private router = inject(Router);
   public pwaService = inject(PwaService);
   public notificationService = inject(NotificationService);
-  private newsService = inject(NewsService);
   private injector = inject(Injector);
+  public homeUseCase = inject(HomeUseCase);
 
   @ViewChild('mapComponent') mapComponent!: MapComponent;
 
@@ -306,18 +325,15 @@ export class HomeComponent implements OnInit {
   // Report Wizard Signals
   selectedReportType = signal<ReportType | null>(null);
   
-  // Dummy Data - Now populated by NewsService
-  userScore = signal(850);
+  // User Data
   userRole = signal('CIUDADANO');
-  userName = signal('Agente'); // Added for display
+  userName = signal('Agente');
   userAvatar = signal(AppConstants.ASSETS.IMAGES.AVATAR_PLACEHOLDER);
   imgLoadError = signal(false);
   
   onAvatarError() {
     this.imgLoadError.set(true);
   }
-
-  newsItems = signal<NewsItem[]>([]);
 
   constructor(@Inject(PLATFORM_ID) private platformId: Object) {}
   
@@ -332,64 +348,18 @@ export class HomeComponent implements OnInit {
       effect(() => {
          const profile = this.authService.profile();
          if (profile) {
-            // Check Identity
             if (!profile.username) this.showIdentityOnboarding.set(true);
-
-            // Update UI
             this.userRole.set(profile.role ? profile.role.toUpperCase() : 'CIUDADANO');
-            this.userName.set(profile.username || profile.full_name || 'Agente'); // Set Name
-
+            this.userName.set(profile.username || profile.full_name || 'Agente'); 
             if (profile.avatar_url) {
                this.userAvatar.set(profile.avatar_url);
             }
          }
-      }, { injector: this.injector }); // Need injector in constructor or field?
+      }, { injector: this.injector });
       
-      // Start Location Tracking silently
       this.locationService.startTracking();
-      this.loadNews();
+      this.homeUseCase.loadHomeData(); // Delegated to UseCase
     }
-  }
-
-  async loadNews() {
-     try {
-       // 1. Official News
-       const posts = await this.newsService.getActiveNews();
-       const mappedPosts = posts.map(p => ({
-          id: p.id!,
-          text: p.content,
-          type: this.mapType(p.type),
-          timestamp: new Date(p.created_at!)
-       }));
-
-       // 2. Proximity Reports (Incidentes Locales)
-       const pos = this.locationService.currentPosition();
-       if (pos) {
-         const nearby = await this.reportService.getNearbyReports(
-           pos.coords.latitude, 
-           pos.coords.longitude,
-           2000 // 2km
-         );
-         
-         const mappedReports = nearby.map(r => ({
-           id: r.id,
-           text: `REPORTE: ${r.type} - ${r.description || ''}`,
-           type: 'urgent' as 'urgent',
-           timestamp: new Date(r.created_at),
-           isReport: true
-         }));
-
-         this.newsItems.set([...mappedPosts, ...mappedReports].sort((a,b) => b.timestamp.getTime() - a.timestamp.getTime()));
-       } else {
-         this.newsItems.set(mappedPosts);
-       }
-     } catch(e) {
-       console.error('Error loading news', e);
-     }
-  }
-
-  mapType(type: string): 'urgent' | 'info' {
-     return type === 'ALERT' ? 'urgent' : 'info';
   }
 
   onOnboardingComplete() {
@@ -398,31 +368,34 @@ export class HomeComponent implements OnInit {
     }
     this.showOnboarding.set(false);
     
-    // After tutorial, check if identity is needed
+    // Check Identity
     const profile = this.authService.profile();
     if (profile && !profile.username) {
       this.showIdentityOnboarding.set(true);
     }
   }
 
-  onIdentityComplete() {
-    this.showIdentityOnboarding.set(false);
-    // Refresh profile
-    this.authService.waitForAuthInit(); 
+  onAlertClick(report: Report) {
+    Logger.debug('Alert clicked:', report);
+    if (report.latitude && report.longitude && this.mapComponent) {
+      this.mapComponent.flyTo(report.latitude, report.longitude);
+      
+      const desc = report.description ? `: ${report.description}` : '';
+      this.toastService.info(`${report.type}${desc}`, 4000);
+    }
   }
 
-  onNewsClick(item: NewsItem) {
-    console.log('News clicked:', item);
-    // Maybe show full detail?
+  onCarouselItemClick(item: CommunityItem) {
+    this.toastService.info(`ℹ️ ${item.title}: ${item.subtitle}`, 3000);
   }
 
   toggleProfileMenu() {
-    this.showNotifications.set(false); // Close other menu
+    this.showNotifications.set(false); 
     this.showProfileMenu.update(v => !v);
   }
 
   toggleNotifications() {
-     this.showProfileMenu.set(false); // Close other menu
+     this.showProfileMenu.set(false); 
      this.showNotifications.update(v => !v);
   }
 
@@ -433,11 +406,8 @@ export class HomeComponent implements OnInit {
 
   callEmergency(type: keyof typeof AppConstants.EMERGENCY) {
     const config = this.EMERGENCY[type];
-    
-    if (config) {
-      if (isPlatformBrowser(this.platformId)) {
-          window.open(`tel:${config.number}`, '_self');
-      }
+    if (config && isPlatformBrowser(this.platformId)) {
+       window.open(`tel:${config.number}`, '_self');
     }
   }
 
@@ -463,7 +433,7 @@ export class HomeComponent implements OnInit {
        const pos = this.locationService.currentPosition();
        if (!pos) {
          this.toastService.error("Esperando señal GPS...");
-         this.locationService.getCurrentPosition(); // Try to force it
+         this.locationService.getCurrentPosition(); 
          return;
        }
 
@@ -475,9 +445,8 @@ export class HomeComponent implements OnInit {
            title: 'Escolta Virtual ZARX',
            text: 'Estoy compartiendo mi ubicación en tiempo real por seguridad.',
            url: url
-         }).catch(err => console.log('Share canceled', err));
+         }).catch(err => Logger.debug('Share canceled', err));
        } else {
-         // Fallback copy to clipboard
          navigator.clipboard.writeText(url).then(() => {
            this.toastService.success("Enlace copiado al portapapeles");
          });
@@ -489,25 +458,21 @@ export class HomeComponent implements OnInit {
 
   async onReportSelected(type: ReportType) {
     if (type === ReportType.SOS) {
-       // SOS is immediate, no wizard
        const result = await this.reportService.createReport(type, "Alerta SOS Manual");
        if (result) this.showReportMenu.set(false);
 
     } else if (type === ReportType.RIESGO_VIDA) {
-       // CRITICAL: Force Manual Location for Precision
        this.showReportMenu.set(false);
-       this.toastService.info("⚠️ POR FAVOR, MARCA LA UBICACIÓN EXACTA DE LA EMERGENCIA", 3000);
+       this.toastService.info("⚠️ POR FAVOR, MARCA LA UBICACIÓN EXACTA", 3000);
        
        this.mapComponent.enableSelectionMode();
        
-       // Listen for one-time location selection
        const sub = this.mapComponent.locationSelected.subscribe(coords => {
-         this.selectedReportType.set(type); // Now open wizard
+         this.selectedReportType.set(type); 
          sub.unsubscribe();
        });
 
     } else {
-       // Open Wizard for other types
        this.showReportMenu.set(false);
        this.selectedReportType.set(type);
     }
@@ -515,14 +480,10 @@ export class HomeComponent implements OnInit {
 
   onReportSuccess() {
     this.selectedReportType.set(null);
-    this.loadNews();
+    this.homeUseCase.loadHomeData(); // Refresh Feeds via UseCase
   }
 
   openManualLocation() {
     this.mapComponent.enableSelectionMode();
-  }
-
-  async handleNeighborValidation(reportId: string) {
-    await this.reportService.validateReport(reportId);
   }
 }

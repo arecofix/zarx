@@ -1,8 +1,7 @@
-import { Injectable, inject, signal, computed } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
 import { SupabaseService } from './supabase.service';
 import { ReputationService } from './reputation.service';
-import QRCode from 'qrcode'; // Javascript library
-import { BehaviorSubject, interval, switchMap, map, take } from 'rxjs';
+import QRCode from 'qrcode';
 
 export interface ZarxIdentity {
   sub: string;        // Subject (User ID)
