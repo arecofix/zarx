@@ -1,3 +1,4 @@
+import './src/shim.server';
 import { APP_BASE_HREF } from '@angular/common';
 import { CommonEngine } from '@angular/ssr/node';
 import express from 'express';
@@ -18,20 +19,29 @@ export function app(): express.Express {
   server.set('views', browserDistFolder);
 
   // Serve static files from /browser
-  server.get('*.*', express.static(browserDistFolder, {
-    maxAge: '1y'
+  server.use(express.static(browserDistFolder, {
+    maxAge: '1y',
+    index: false
   }));
 
-  // Handle SSR for dynamic routes including /celular
-  server.get('*', (req, res, next) => {
-    const { protocol, originalUrl, baseUrl, headers } = req;
+  const ssrCache = new Map<string, { html: string, timestamp: number }>();
+  const CACHE_TTL_MS = 1000 * 60 * 15; // 15 mins cache TTL
 
-    // Special caching logic for /celular to ensure instant load from CDN/Browser cache if possible
-    if (originalUrl.startsWith('/celular')) {
-       // Set cache control for the HTML response itself. 
-       // Note: This caches the SSR result. Use carefully if content is dynamic per user.
-       // Assuming /celular is public and static enough.
+  // Handle SSR for dynamic routes including /celular
+  server.get(/.*/, (req, res, next) => {
+    const { protocol, originalUrl, baseUrl, headers } = req;
+    
+    const cacheKey = originalUrl;
+    const isCacheable = originalUrl === '/' || originalUrl.startsWith('/inicio') || originalUrl.startsWith('/celular');
+
+    if (isCacheable) {
        res.set('Cache-Control', 'public, max-age=3600, s-maxage=86400'); 
+       
+       const cached = ssrCache.get(cacheKey);
+       if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+          res.send(cached.html);
+          return;
+       }
     }
 
     commonEngine
@@ -42,7 +52,12 @@ export function app(): express.Express {
         publicPath: browserDistFolder,
         providers: [{ provide: APP_BASE_HREF, useValue: baseUrl }],
       })
-      .then((html: string) => res.send(html))
+      .then((html: string) => {
+        if (isCacheable) {
+           ssrCache.set(cacheKey, { html, timestamp: Date.now() });
+        }
+        res.send(html)
+      })
       .catch((err: unknown) => next(err));
   });
 

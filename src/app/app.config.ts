@@ -1,7 +1,16 @@
-import { ApplicationConfig, provideZonelessChangeDetection, isDevMode } from '@angular/core';
+import {
+  ApplicationConfig,
+  provideExperimentalZonelessChangeDetection,
+  isDevMode,
+  importProvidersFrom,
+} from '@angular/core';
 import { provideClientHydration } from '@angular/platform-browser';
 import { provideIonicAngular } from '@ionic/angular/standalone';
-import { provideRouter, withEnabledBlockingInitialNavigation, withInMemoryScrolling } from '@angular/router';
+import {
+  provideRouter,
+  withEnabledBlockingInitialNavigation,
+  withInMemoryScrolling,
+} from '@angular/router';
 import { provideFirebaseApp, initializeApp } from '@angular/fire/app';
 import { provideMessaging, getMessaging } from '@angular/fire/messaging';
 
@@ -11,21 +20,30 @@ import { environment } from '../environments/environment';
 
 export const appConfig: ApplicationConfig = {
   providers: [
-    provideZonelessChangeDetection(),
+    provideExperimentalZonelessChangeDetection(),
     provideRouter(
       routes,
       withEnabledBlockingInitialNavigation(),
-      withInMemoryScrolling({ anchorScrolling: 'enabled', scrollPositionRestoration: 'enabled' })
+      withInMemoryScrolling({ anchorScrolling: 'enabled', scrollPositionRestoration: 'enabled' }),
     ),
     provideClientHydration(),
     provideIonicAngular({
-      mode: 'ios'
+      mode: 'ios',
     }),
-    provideFirebaseApp(() => initializeApp(environment.firebase)),
-    provideMessaging(() => getMessaging()),
+    importProvidersFrom(provideFirebaseApp(() => initializeApp(environment.firebase))),
+    importProvidersFrom(
+      provideMessaging(() => {
+        try {
+          return getMessaging();
+        } catch (error) {
+          console.warn('Firebase Messaging is not supported in this environment', error);
+          return null as any;
+        }
+      }),
+    ),
     provideServiceWorker('ngsw-worker.js', {
       enabled: !isDevMode(),
-      registrationStrategy: 'registerWhenStable:30000'
-    })
-  ]
+      registrationStrategy: 'registerWhenStable:30000',
+    }),
+  ],
 };

@@ -1,5 +1,5 @@
-import { Component, OnInit, OnDestroy, inject, signal, NgZone } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, OnInit, OnDestroy, inject, signal, NgZone, PLATFORM_ID } from '@angular/core';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { ZoneService, Zone } from '../../services/zone.service';
@@ -156,6 +156,7 @@ export class ZoneEditorComponent implements OnInit, OnDestroy {
   private zoneService = inject(ZoneService);
   private ngZone = inject(NgZone);
   private router = inject(Router);
+  private platformId = inject(PLATFORM_ID);
 
   map!: any;
   drawControl!: any; 
@@ -202,6 +203,10 @@ export class ZoneEditorComponent implements OnInit, OnDestroy {
 
   async ngOnInit() {
     this.isLoading.set(true);
+    if (!isPlatformBrowser(this.platformId)) {
+       this.isLoading.set(false);
+       return;
+    }
     // Initialize Map OUTSIDE Angular Zone to avoid excessive change detection
     this.ngZone.runOutsideAngular(() => {
       this.initMap();
@@ -214,7 +219,6 @@ export class ZoneEditorComponent implements OnInit, OnDestroy {
   private async initMap() {
     // Dynamic Imports
     this.L = await import('leaflet');
-    await import('leaflet-draw');
     const L = this.L;
 
     this.drawnItems = new L.FeatureGroup();
@@ -266,11 +270,11 @@ export class ZoneEditorComponent implements OnInit, OnDestroy {
        // Leaflet Draw handles touch but icon size helps
     }
 
-    this.drawControl = new L.Control.Draw(drawOptions);
+    this.drawControl = new (L.Control as any).Draw(drawOptions);
     this.map.addControl(this.drawControl);
 
     // Event Handling
-    this.map.on(L.Draw.Event.CREATED, (e: any) => {
+    this.map.on((L as any).Draw.Event.CREATED, (e: any) => {
         const layer = e.layer;
         
         this.ngZone.run(() => {

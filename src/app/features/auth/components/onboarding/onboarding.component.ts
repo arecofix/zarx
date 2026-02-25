@@ -38,13 +38,13 @@ import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
               [src]="avatarUrl() || 'assets/img/avatar-placeholder.png'" 
               class="w-full h-full object-cover"
               alt="Avatar"
-              (error)="handleImageError($event)"
+              (error)="handleImageError($any($event))"
             />
              <!-- Overlay -->
              <label class="absolute inset-0 bg-black/60 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer backdrop-blur-sm">
                <svg class="w-8 h-8 text-red-500 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
                <span class="text-[10px] font-bold text-red-400 uppercase tracking-widest">Cambiar Foto</span>
-               <input type="file" accept="image/*" class="hidden" (change)="uploadAvatar($event)">
+               <input type="file" accept="image/*" class="hidden" (change)="uploadAvatar($any($event))">
              </label>
           </div>
            @if (isUploading()) {
@@ -60,7 +60,7 @@ import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
             <label class="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2 ml-1">Nombre de Usuario</label>
             <div class="relative">
               <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                <span class="text-zinc-500 font-bold">@</span>
+                <span class="text-zinc-500 font-bold">&#64;</span>
               </div>
               <input 
                 type="text" 

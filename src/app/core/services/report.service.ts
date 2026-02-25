@@ -75,7 +75,7 @@ export class ReportService {
         throw error;
       }
       
-      const reports = (data || []).map(this.mapReportLocation);
+      const reports = ((data as any[]) || []).map(this.mapReportLocation);
       
       // Filter Logic:
       // Live Feed: All Critical Reports regardless of status (as long as active)
@@ -95,15 +95,16 @@ export class ReportService {
 
       this.startRealtimeListener();
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error fetching reports:', error);
+      const pgError = error as { code?: string, message?: string };
       
       // Specific handling for missing Foreign Key (Common in new setups)
-      if (error.code === 'PGRST200') {
+      if (pgError.code === 'PGRST200') {
           console.error('👉 DB FIX REQUIRED: Run migrations/20240210000003_fix_admin_permissions.sql');
           this.toast.error('Error Crítico: Faltan relaciones DB. Ejecute script SQL.');
       } else {
-          this.toast.error('Error al cargar reportes activos.');
+          this.toast.error(pgError.message || 'Error al cargar reportes activos.');
       }
     } finally {
       this.isLoadingReports.set(false);
@@ -119,11 +120,10 @@ export class ReportService {
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'reports' },
         async (payload) => {
-           const newRecord = payload.new as any;
+           const newRecord = payload.new as Record<string, unknown>;
            
-           // Discriminate by Type (Switch/If Logic requested)
-           if (newRecord) {
-              this.processIncomingReport(newRecord);
+           if (newRecord && newRecord['id']) {
+              this.processIncomingReport(newRecord as { id: string });
            }
         }
       )
@@ -132,7 +132,7 @@ export class ReportService {
       });
   }
 
-  private async processIncomingReport(record: any) {
+  private async processIncomingReport(record: { id: string }) {
      // Fetch full details with profile
      const { data } = await this.supabase
         .from('reports')
@@ -233,7 +233,7 @@ export class ReportService {
            return [];
         }
 
-        return (data || []).map(this.mapReportLocation);
+        return ((data as any[]) || []).map(this.mapReportLocation);
     } catch (e) {
         console.error('Exception fetching reports:', e);
         return [];
@@ -264,16 +264,16 @@ export class ReportService {
   /**
    * Technical Dispatch Update (For Engaged/Open/Validated transitions)
    */
-  async updateReportStatusDispatch(reportId: string, status: any): Promise<boolean> {
+  async updateReportStatusDispatch(reportId: string, status: 'PENDING' | 'VALIDATED' | 'FALSE_ALARM' | 'RESOLVED' | 'VERIFIED' | 'OPEN' | 'ENGAGED'): Promise<boolean> {
       return this.updateReportStatus(reportId, status);
   }
 
   /**
    * Generic Status Update
    */
-  private async updateReportStatus(reportId: string, status: 'VALIDATED' | 'FALSE_ALARM' | 'RESOLVED', reason?: string): Promise<boolean> {
+  private async updateReportStatus(reportId: string, status: 'PENDING' | 'VALIDATED' | 'FALSE_ALARM' | 'RESOLVED' | 'VERIFIED' | 'OPEN' | 'ENGAGED', reason?: string): Promise<boolean> {
     try {
-      const updates: any = { status: status };
+      const updates: { status: string; rejection_reason?: string } = { status: status };
       if (reason) updates.rejection_reason = reason;
 
       const { error } = await this.supabase
@@ -355,6 +355,16 @@ export class ReportService {
       const user = this.auth.currentUser();
       if (!user) throw new Error('Debes iniciar sesión para reportar.');
 
+      // Shadowban check
+      const profile = this.auth.profile();
+      if (profile?.is_shadowbanned) {
+         Logger.warn(`[SHADOWBAN] Silently rejecting report from ${user.id}`);
+         // Return fake success
+         this.toast.success('✅ Reporte enviado para revisión');
+         this.safeHaptics(NotificationType.Success);
+         return true;
+      }
+
       // 1. Get Location
       let pos;
       try {
@@ -399,9 +409,10 @@ export class ReportService {
       this.safeHaptics(NotificationType.Success);
       return true;
 
-    } catch (error: any) {
-      console.error('Error creating report:', error);
-      this.toast.error(error.message || 'Error al enviar reporte.');
+    } catch (error: unknown) {
+      const err = error as Error;
+      console.error('Error creating report:', err);
+      this.toast.error(err.message || 'Error al enviar reporte.');
       this.safeHaptics(NotificationType.Error);
       return false;
     } finally {
@@ -435,7 +446,7 @@ export class ReportService {
    * Helper to parse PostGIS/Supabase location to lat/lng
    * Defined as arrow function or binded method
    */
-  private mapReportLocation = (report: any): Report => {
+  private mapReportLocation = (report: Partial<Report> & Record<string, any>): Report => {
     let lat = report.latitude;
     let lng = report.longitude;
     
@@ -458,7 +469,7 @@ export class ReportService {
       latitude: lat,
       longitude: lng,
       profiles: profile
-    };
+    } as Report;
   }
 
   private async safeHaptics(type: NotificationType) {

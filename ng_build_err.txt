@@ -1,0 +1,240 @@
+
+> zarx-security@1.0.0 build
+> ng build
+
+[35mBrowser bundles[39m     
+[1mInitial chunk files[22m [2m | [22m[1mNames[22m                     [2m | [22m [1mRaw size[22m[2m | [22m[1mEstimated transfer size[22m
+[32mscripts-MH5PN6FS.js[39m [2m | [22m[2mscripts[22m                   [2m | [22m[36m219.69 kB[39m[2m | [22m               [36m50.41 kB[39m
+[32mchunk-7SKUG6DN.js[39m   [2m | [22m[2m-[22m                         [2m | [22m[36m214.08 kB[39m[2m | [22m               [36m62.32 kB[39m
+[32mchunk-NZWP6XUT.js[39m   [2m | [22m[2m-[22m                         [2m | [22m[36m166.21 kB[39m[2m | [22m               [36m37.82 kB[39m
+[32mstyles-R4XUZMBG.css[39m [2m | [22m[2mstyles[22m                    [2m | [22m[36m132.57 kB[39m[2m | [22m               [36m15.02 kB[39m
+[32mmain-C5WCNAZZ.js[39m    [2m | [22m[2mmain[22m                      [2m | [22m [36m90.73 kB[39m[2m | [22m               [36m21.82 kB[39m
+[32mchunk-F7TSGLNP.js[39m   [2m | [22m[2m-[22m                         [2m | [22m [36m76.36 kB[39m[2m | [22m               [36m19.33 kB[39m
+[32mchunk-RWDTHWYM.js[39m   [2m | [22m[2m-[22m                         [2m | [22m [36m58.10 kB[39m[2m | [22m               [36m18.82 kB[39m
+[32mchunk-FBWCMHE5.js[39m   [2m | [22m[2m-[22m                         [2m | [22m [36m50.21 kB[39m[2m | [22m               [36m14.25 kB[39m
+[32mchunk-J7LAXLGQ.js[39m   [2m | [22m[2m-[22m                         [2m | [22m [36m41.66 kB[39m[2m | [22m                [36m8.59 kB[39m
+[32mchunk-SHXD6J5Z.js[39m   [2m | [22m[2m-[22m                         [2m | [22m [36m11.85 kB[39m[2m | [22m                [36m4.65 kB[39m
+[32mchunk-STYZBDIN.js[39m   [2m | [22m[2m-[22m                         [2m | [22m [36m10.29 kB[39m[2m | [22m                [36m2.66 kB[39m
+[32mchunk-QMGJC5CD.js[39m   [2m | [22m[2m-[22m                         [2m | [22m  [36m6.95 kB[39m[2m | [22m                [36m2.73 kB[39m
+[32mchunk-M2X7KQLB.js[39m   [2m | [22m[2m-[22m                         [2m | [22m  [36m5.80 kB[39m[2m | [22m                [36m2.14 kB[39m
+[32mchunk-DAREN7LE.js[39m   [2m | [22m[2m-[22m                         [2m | [22m  [36m2.65 kB[39m[2m | [22m              [36m969 bytes[39m
+[32mchunk-RPD5PITN.js[39m   [2m | [22m[2m-[22m                         [2m | [22m  [36m1.83 kB[39m[2m | [22m                [36m1.05 kB[39m
+[32mchunk-C5RQ2IC2.js[39m   [2m | [22m[2m-[22m                         [2m | [22m  [36m1.32 kB[39m[2m | [22m              [36m583 bytes[39m
+[32mchunk-2YSZFPCQ.js[39m   [2m | [22m[2m-[22m                         [2m | [22m  [36m1.02 kB[39m[2m | [22m                [36m1.02 kB[39m
+[32mchunk-XKZWFFCA.js[39m   [2m | [22m[2m-[22m                         [2m | [22m[36m946 bytes[39m[2m | [22m              [36m946 bytes[39m
+[32mchunk-3IVKBF6N.js[39m   [2m | [22m[2m-[22m                         [2m | [22m[36m943 bytes[39m[2m | [22m              [36m943 bytes[39m
+[32mchunk-CASY3UTO.js[39m   [2m | [22m[2m-[22m                         [2m | [22m[36m908 bytes[39m[2m | [22m              [36m908 bytes[39m
+[32mchunk-TZSBHHTV.js[39m   [2m | [22m[2m-[22m                         [2m | [22m[36m796 bytes[39m[2m | [22m              [36m796 bytes[39m
+[32mchunk-NWJ5J3BN.js[39m   [2m | [22m[2m-[22m                         [2m | [22m[36m716 bytes[39m[2m | [22m              [36m716 bytes[39m
+[32mchunk-NEN423YF.js[39m   [2m | [22m[2m-[22m                         [2m | [22m[36m595 bytes[39m[2m | [22m              [36m595 bytes[39m
+[32mchunk-57YRIO75.js[39m   [2m | [22m[2m-[22m                         [2m | [22m[36m541 bytes[39m[2m | [22m              [36m541 bytes[39m
+[32mchunk-CRKOT57O.js[39m   [2m | [22m[2m-[22m                         [2m | [22m[36m256 bytes[39m[2m | [22m              [36m256 bytes[39m
+[32mchunk-42C7ZIID.js[39m   [2m | [22m[2m-[22m                         [2m | [22m [36m99 bytes[39m[2m | [22m               [36m99 bytes[39m
+
+[1m [22m                   [2m | [22m[1mInitial total[22m             [2m | [22m  [1m[93m1.10 MB[39m[22m[2m | [22m              [1m269.99 kB[22m
+
+[1mLazy chunk files[22m    [2m | [22m[1mNames[22m                     [2m | [22m [1mRaw size[22m[2m | [22m[1mEstimated transfer size[22m
+[32mchunk-LFJCZM5K.js[39m   [2m | [22m[2mcore-js[22m                   [2m | [22m [36m94.00 kB[39m[2m | [22m               [36m28.48 kB[39m
+[32mchunk-CRM4CX3J.js[39m   [2m | [22m[2mhome[22m                      [2m | [22m [36m87.14 kB[39m[2m | [22m               [36m20.20 kB[39m
+[32mchunk-3WDK6ZAB.js[39m   [2m | [22m[2madmin-dashboard-component[22m [2m | [22m [36m27.40 kB[39m[2m | [22m                [36m7.67 kB[39m
+[32mchunk-B7IUMSJO.js[39m   [2m | [22m[2mdispatch-console-component[22m[2m | [22m [36m26.64 kB[39m[2m | [22m                [36m7.23 kB[39m
+[32mchunk-ARYDWACJ.js[39m   [2m | [22m[2mpwa-camera-entry[22m          [2m | [22m [36m18.84 kB[39m[2m | [22m                [36m4.94 kB[39m
+[32mchunk-RNULDNKP.js[39m   [2m | [22m[2mdom[22m                       [2m | [22m [36m18.47 kB[39m[2m | [22m                [36m5.10 kB[39m
+[32mchunk-GGETCGOI.js[39m   [2m | [22m[2muser-profile-component[22m    [2m | [22m [36m17.80 kB[39m[2m | [22m                [36m6.00 kB[39m
+[32mchunk-SMKMIHCW.js[39m   [2m | [22m[2mmonitoring-component[22m      [2m | [22m [36m15.93 kB[39m[2m | [22m                [36m5.00 kB[39m
+[32mchunk-7XZ6IJUN.js[39m   [2m | [22m[2mlogin-component[22m           [2m | [22m [36m12.81 kB[39m[2m | [22m                [36m4.17 kB[39m
+[32mchunk-UY2BCOL5.js[39m   [2m | [22m[2muser-management-component[22m [2m | [22m [36m12.61 kB[39m[2m | [22m                [36m4.08 kB[39m
+[32mchunk-WO6345LE.js[39m   [2m | [22m[2mzone-editor-component[22m     [2m | [22m [36m11.73 kB[39m[2m | [22m                [36m3.76 kB[39m
+[32mchunk-7PQFYL6M.js[39m   [2m | [22m[2mreport-history-component[22m  [2m | [22m [36m11.48 kB[39m[2m | [22m                [36m3.84 kB[39m
+[32mchunk-6PMLOZCS.js[39m   [2m | [22m[2m-[22m                         [2m | [22m  [36m8.73 kB[39m[2m | [22m                [36m3.09 kB[39m
+[32mchunk-HUF3BRG2.js[39m   [2m | [22m[2mresponder-dashboard[22m       [2m | [22m  [36m8.69 kB[39m[2m | [22m                [36m2.55 kB[39m
+[32mchunk-JO2GTBQ6.js[39m   [2m | [22m[2mnews-admin-component[22m      [2m | [22m  [36m8.20 kB[39m[2m | [22m                [36m2.74 kB[39m
+[2m...and 26 more lazy chunks files. Use "--verbose" to show all the files.[22m
+
+
+[35mServer bundles[39m      
+[1mInitial chunk files[22m [2m | [22m[1mNames[22m                     [2m | [22m [1mRaw size[22m
+[32mserver.mjs[39m          [2m | [22m[2mserver[22m                    [2m | [22m[36m807.92 kB[39m[2m | [22m                       
+[32mchunk-M6537ZUX.mjs[39m  [2m | [22m[2m-[22m                         [2m | [22m[36m535.49 kB[39m[2m | [22m                       
+[32mpolyfills.server.mjs[39m[2m | [22m[2mpolyfills.server[22m          [2m | [22m[36m234.32 kB[39m[2m | [22m                       
+[32mchunk-ABDH56QB.mjs[39m  [2m | [22m[2m-[22m                         [2m | [22m[36m233.24 kB[39m[2m | [22m                       
+[32mchunk-WLFDPVUI.mjs[39m  [2m | [22m[2m-[22m                         [2m | [22m[36m166.24 kB[39m[2m | [22m                       
+[32mchunk-TCWFGBOH.mjs[39m  [2m | [22m[2m-[22m                         [2m | [22m [36m76.41 kB[39m[2m | [22m                       
+[32mchunk-7DN7I2JL.mjs[39m  [2m | [22m[2m-[22m                         [2m | [22m [36m58.13 kB[39m[2m | [22m                       
+[32mchunk-QCRNPRBR.mjs[39m  [2m | [22m[2m-[22m                         [2m | [22m [36m50.34 kB[39m[2m | [22m                       
+[32mchunk-VFIB2GVH.mjs[39m  [2m | [22m[2m-[22m                         [2m | [22m [36m41.70 kB[39m[2m | [22m                       
+[32mchunk-MIRGAL7G.mjs[39m  [2m | [22m[2m-[22m                         [2m | [22m [36m10.32 kB[39m[2m | [22m                       
+[32mchunk-K35EMC6E.mjs[39m  [2m | [22m[2m-[22m                         [2m | [22m  [36m6.99 kB[39m[2m | [22m                       
+[32mchunk-QYWQ4XMT.mjs[39m  [2m | [22m[2m-[22m                         [2m | [22m  [36m5.83 kB[39m[2m | [22m                       
+[32mchunk-6G77327B.mjs[39m  [2m | [22m[2m-[22m                         [2m | [22m  [36m2.68 kB[39m[2m | [22m                       
+[32mchunk-ESCRGOZR.mjs[39m  [2m | [22m[2m-[22m                         [2m | [22m  [36m1.87 kB[39m[2m | [22m                       
+[32mchunk-XJW2PFHB.mjs[39m  [2m | [22m[2m-[22m                         [2m | [22m  [36m1.45 kB[39m[2m | [22m                       
+[32mchunk-OPYZYNBS.mjs[39m  [2m | [22m[2m-[22m                         [2m | [22m  [36m1.35 kB[39m[2m | [22m                       
+[32mchunk-RCSHZXDH.mjs[39m  [2m | [22m[2m-[22m                         [2m | [22m  [36m1.06 kB[39m[2m | [22m                       
+[32mchunk-GZ2A5572.mjs[39m  [2m | [22m[2m-[22m                         [2m | [22m[36m980 bytes[39m[2m | [22m                       
+[32mchunk-6VPYUYUW.mjs[39m  [2m | [22m[2m-[22m                         [2m | [22m[36m976 bytes[39m[2m | [22m                       
+[32mmain.server.mjs[39m     [2m | [22m[2mmain.server[22m               [2m | [22m[36m969 bytes[39m[2m | [22m                       
+[32mchunk-ISMUEZ4U.mjs[39m  [2m | [22m[2m-[22m                         [2m | [22m[36m943 bytes[39m[2m | [22m                       
+[32mchunk-JCKLP3WV.mjs[39m  [2m | [22m[2m-[22m                         [2m | [22m[36m831 bytes[39m[2m | [22m                       
+[32mchunk-WAEZNMZP.mjs[39m  [2m | [22m[2m-[22m                         [2m | [22m[36m629 bytes[39m[2m | [22m                       
+[32mchunk-2SNVVQ7I.mjs[39m  [2m | [22m[2m-[22m                         [2m | [22m[36m575 bytes[39m[2m | [22m                       
+[32mchunk-VIUVSWME.mjs[39m  [2m | [22m[2m-[22m                         [2m | [22m[36m290 bytes[39m[2m | [22m                       
+[32mchunk-PLVR2XMF.mjs[39m  [2m | [22m[2m-[22m                         [2m | [22m[36m132 bytes[39m[2m | [22m                       
+
+[1mLazy chunk files[22m    [2m | [22m[1mNames[22m                     [2m | [22m [1mRaw size[22m
+[32mchunk-YF4ROKN6.mjs[39m  [2m | [22m[2mhome[22m                      [2m | [22m [36m87.18 kB[39m[2m | [22m                       
+[32mchunk-O4N6P7WG.mjs[39m  [2m | [22m[2madmin-dashboard-component[22m [2m | [22m [36m27.45 kB[39m[2m | [22m                       
+[32mchunk-U5BPSJW7.mjs[39m  [2m | [22m[2mdispatch-console-component[22m[2m | [22m [36m26.69 kB[39m[2m | [22m                       
+[32mchunk-IT2PXPMW.mjs[39m  [2m | [22m[2muser-profile-component[22m    [2m | [22m [36m17.84 kB[39m[2m | [22m                       
+[32mchunk-X34DUYRU.mjs[39m  [2m | [22m[2mmonitoring-component[22m      [2m | [22m [36m15.97 kB[39m[2m | [22m                       
+[32mchunk-WLST5YM6.mjs[39m  [2m | [22m[2mlogin-component[22m           [2m | [22m [36m12.85 kB[39m[2m | [22m                       
+[32mchunk-UH2A6LFJ.mjs[39m  [2m | [22m[2muser-management-component[22m [2m | [22m [36m12.65 kB[39m[2m | [22m                       
+[32mchunk-DXEEKIJZ.mjs[39m  [2m | [22m[2mxhr2[22m                      [2m | [22m [36m12.07 kB[39m[2m | [22m                       
+[32mchunk-2S6LMRMV.mjs[39m  [2m | [22m[2mzone-editor-component[22m     [2m | [22m [36m11.77 kB[39m[2m | [22m                       
+[32mchunk-F765JI2B.mjs[39m  [2m | [22m[2mreport-history-component[22m  [2m | [22m [36m11.53 kB[39m[2m | [22m                       
+[32mchunk-5AMMEROM.mjs[39m  [2m | [22m[2m-[22m                         [2m | [22m  [36m8.78 kB[39m[2m | [22m                       
+[32mchunk-B4SSA55H.mjs[39m  [2m | [22m[2mresponder-dashboard[22m       [2m | [22m  [36m8.73 kB[39m[2m | [22m                       
+[32mchunk-XLVNM65J.mjs[39m  [2m | [22m[2mnews-admin-component[22m      [2m | [22m  [36m8.23 kB[39m[2m | [22m                       
+[32mchunk-JU252BY5.mjs[39m  [2m | [22m[2m-[22m                         [2m | [22m  [36m7.93 kB[39m[2m | [22m                       
+[32mchunk-NJMR5BH4.mjs[39m  [2m | [22m[2m-[22m                         [2m | [22m  [36m6.77 kB[39m[2m | [22m                       
+[2m...and 20 more lazy chunks files. Use "--verbose" to show all the files.[22m
+
+[35mPrerendered 0 static routes.[39m
+Application bundle generation failed. [8.347 seconds]
+
+Ôû▓ [WARNING] The glob pattern import("./**/*.entry.js*") did not match any files [empty-glob]
+
+    node_modules/@stencil/core/internal/client/index.js:169:2:
+      169 Ôöé   `./${bundleId}.entry.js${BUILD5.hotModuleReplacement && hmrVers...
+          ÔòÁ   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+Ôû▓ [WARNING] The glob pattern import("./**/*.entry.js*") did not match any files [empty-glob]
+
+    node_modules/@stencil/core/internal/client/index.js:169:2:
+      169 Ôöé   `./${bundleId}.entry.js${BUILD5.hotModuleReplacement && hmrVers...
+          ÔòÁ   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+Ôû▓ [WARNING] bundle initial exceeded maximum budget. Budget 1.00 MB was not met by 97.12 kB with a total of 1.10 MB.
+
+
+Ôû▓ [WARNING] 104 rules skipped due to selector errors:
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & * -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+  & -> Empty sub-selector
+
+
+X [ERROR] An error occurred while extracting routes.
+
+Error: NG0401
+    at Ph (file:///C:/Users/Ezequiel/Desktop/Utilidades/Trabajo/app/Proyectos/arecofix/zarx/zarx-system/.angular/prerender-root/bb17a7d7-7bef-43cb-8b9b-978c2c2658c2/chunk-ABDH56QB.mjs:34:73087)
+    at ZT (file:///C:/Users/Ezequiel/Desktop/Utilidades/Trabajo/app/Proyectos/arecofix/zarx/zarx-system/.angular/prerender-root/bb17a7d7-7bef-43cb-8b9b-978c2c2658c2/chunk-ABDH56QB.mjs:34:122817)
+    at y2 (file:///C:/Users/Ezequiel/Desktop/Utilidades/Trabajo/app/Proyectos/arecofix/zarx/zarx-system/.angular/prerender-root/bb17a7d7-7bef-43cb-8b9b-978c2c2658c2/chunk-M6537ZUX.mjs:75:88760)
+    at bg (file:///C:/Users/Ezequiel/Desktop/Utilidades/Trabajo/app/Proyectos/arecofix/zarx/zarx-system/.angular/prerender-root/bb17a7d7-7bef-43cb-8b9b-978c2c2658c2/chunk-M6537ZUX.mjs:48:6419)
+    at u (file:///C:/Users/Ezequiel/Desktop/Utilidades/Trabajo/app/Proyectos/arecofix/zarx/zarx-system/.angular/prerender-root/bb17a7d7-7bef-43cb-8b9b-978c2c2658c2/chunk-M6537ZUX.mjs:48:7989)
+    at async extractRoutes (C:\Users\Ezequiel\Desktop\Utilidades\Trabajo\app\Proyectos\arecofix\zarx\zarx-system\node_modules\@angular\build\src\utils\server-rendering\routes-extractor-worker.js:24:50)
+    at async C:\Users\Ezequiel\Desktop\Utilidades\Trabajo\app\Proyectos\arecofix\zarx\zarx-system\node_modules\@angular\build\node_modules\piscina\dist\worker.js:144:26
+
+

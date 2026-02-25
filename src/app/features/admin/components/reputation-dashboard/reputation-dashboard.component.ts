@@ -45,7 +45,7 @@ import { Profile } from '../../../../core/models';
                           <img [src]="user.avatar_url || 'assets/avatar-placeholder.png'" class="w-full h-full object-cover">
                        </div>
                        <div>
-                          <div class="font-bold text-slate-200">@{{ user.username || 'Anon' }}</div>
+                          <div class="font-bold text-slate-200">&#64;{{ user.username || 'Anon' }}</div>
                           <div class="text-[10px] text-slate-400 font-mono">{{ user.id | slice:0:8 }}</div>
                        </div>
                     </div>
@@ -80,7 +80,7 @@ import { Profile } from '../../../../core/models';
                           <img [src]="user.avatar_url || 'assets/avatar-placeholder.png'" class="w-full h-full object-cover">
                        </div>
                        <div>
-                          <div class="font-bold text-slate-200">@{{ user.username || 'Anon' }}</div>
+                          <div class="font-bold text-slate-200">&#64;{{ user.username || 'Anon' }}</div>
                           <div class="text-[10px] text-red-300 font-mono flex items-center gap-1">
                              Status: OBSERVADO
                           </div>

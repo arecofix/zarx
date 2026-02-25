@@ -10,7 +10,7 @@ import { Logger } from '../utils/logger';
   providedIn: 'root'
 })
 export class MessagingService {
-  private messaging = inject(Messaging);
+  private messaging = inject(Messaging, { optional: true });
   private supabase = inject(SupabaseService).client;
   private auth = inject(AuthService);
   private toast = inject(ToastService);
@@ -64,7 +64,7 @@ export class MessagingService {
   }
 
   async getToken() {
-    if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined' || !this.messaging) return;
     
     try {
       const currentToken = await getToken(this.messaging, {
@@ -111,6 +111,8 @@ export class MessagingService {
   }
 
   listenForMessages() {
+    if (!this.messaging) return;
+    
     onMessage(this.messaging, (payload) => {
       Logger.debug('Message received:', payload);
       this.currentMessage.set(payload);

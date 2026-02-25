@@ -4,12 +4,12 @@ import { CommonModule } from '@angular/common';
 import { ReportService } from '../../../../../core/services/report.service';
 import { REPORT_GROUPS } from '../../../../../core/config/report.config';
 import { Report, ReportType } from '../../../../../core/models';
-import { DatePipe } from '@angular/common';
+import { DatePipe, NgOptimizedImage } from '@angular/common';
 
 @Component({
   selector: 'app-incoming-feed',
   standalone: true,
-  imports: [CommonModule, DatePipe],
+  imports: [CommonModule, DatePipe, NgOptimizedImage],
   template: `
     <div class="h-full flex flex-col w-full overflow-hidden">
       
@@ -50,10 +50,11 @@ import { DatePipe } from '@angular/common';
                   <div class="flex items-start justify-between mb-2">
                      <div class="flex items-center gap-2">
                         <!-- Avatar -->
-                        <div class="w-8 h-8 rounded-full bg-slate-700 overflow-hidden border border-slate-600">
+                        <div class="relative w-8 h-8 rounded-full bg-slate-700 overflow-hidden border border-slate-600">
                            <img 
-                              [src]="report.profiles?.avatar_url || 'assets/images/placeholder_avatar.png'" 
-                              class="w-full h-full object-cover" 
+                              [ngSrc]="report.profiles?.avatar_url || 'assets/images/spritesheet.png'" 
+                              fill
+                              class="object-cover" 
                               onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAyNCAyNCcgZmlsbD0ibm9uZScgc3Ryb2tlPSdjdXJyZW50Q29sb3InIHN0cm9rZS13aWR0aD0nMicgc3Ryb2tlLWxpbmVjYXA9J3JvdW5kJyBzdHJva2UtbGluZWpvaW49J3JvdW5kJyBjbGFzcz0idGV4dC1zbGF0ZS01MDAiPjxjaXJjbGUgY3g9IjEyIiBjeT0iNyIgcj0iNCIgLz48cGF0aCBkPSJNMjAgMjF2LTIwLTYiIC8+PC9zdmc+'"
                            />
                         </div>
@@ -92,8 +93,8 @@ import { DatePipe } from '@angular/common';
                         @if (isVideo(report.evidence_url)) {
                            <video [src]="report.evidence_url" controls class="w-full h-full object-contain"></video>
                         } @else {
-                           <img [src]="report.evidence_url" class="w-full h-full object-cover opacity-80 group-hover/img:opacity-100 transition-opacity" />
-                           <a [href]="report.evidence_url" target="_blank" class="absolute inset-0 flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity bg-black/40 text-decoration-none">
+                           <img [ngSrc]="report.evidence_url" fill class="object-cover opacity-80 group-hover/img:opacity-100 transition-opacity" />
+                           <a [href]="report.evidence_url" target="_blank" class="absolute inset-0 z-10 flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity bg-black/40 text-decoration-none">
                               <span class="text-white text-xs font-bold">🔍 Ver Imagen Original</span>
                            </a>
                         }

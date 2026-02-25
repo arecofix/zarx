@@ -33,6 +33,7 @@ export interface Profile {
   trust_level?: 'OBSERVED' | 'CITIZEN' | 'WATCHER';
   invite_code?: string;
   referred_by?: string;
+  is_shadowbanned?: boolean;
 }
 
 export interface Report {

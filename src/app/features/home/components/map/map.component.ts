@@ -206,7 +206,6 @@ export class MapComponent implements AfterViewInit, OnDestroy {
   private async initMap(): Promise<void> {
     // Dynamic Imports
     this.L = await import('leaflet');
-    await import('leaflet.heat');
 
     // Init Layers
     this.zonesLayer = new this.L.FeatureGroup();

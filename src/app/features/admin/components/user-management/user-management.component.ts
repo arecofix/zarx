@@ -86,7 +86,12 @@ import { Profile } from '../../../../core/models';
                          <img [src]="user.avatar_url || 'assets/images/placeholder_avatar.png'" class="w-full h-full object-cover">
                       </div>
                       <div>
-                        <div class="font-bold text-white">{{ user.full_name || 'Sin Nombre' }}</div>
+                        <div class="font-bold text-white flex items-center gap-2">
+                           {{ user.full_name || 'Sin Nombre' }}
+                           @if (user.is_shadowbanned) {
+                              <span class="px-1.5 py-0.5 rounded bg-red-900/40 border border-red-500/50 text-red-400 text-[9px] uppercase tracking-widest" title="Usuario silenciado">SHADOWBANNED</span>
+                           }
+                        </div>
                         <div class="text-xs text-slate-500 font-mono">{{ user.email }}</div>
                       </div>
                     </div>
@@ -180,6 +185,26 @@ import { Profile } from '../../../../core/models';
                     </div>
                  </div>
 
+                 <!-- Shadowban Toggle -->
+                 <div class="mt-6 p-4 rounded-xl border border-red-900/30 bg-red-950/10">
+                    <div class="flex items-start justify-between">
+                       <div>
+                          <div class="text-xs font-bold text-red-400 uppercase tracking-widest mb-1 flex items-center gap-1">
+                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+                             Shadowban
+                          </div>
+                          <div class="text-[10px] text-slate-500 leading-tight">
+                             Oculta los reportes futuros de este usuario de la vista pública (Falsas Alarmas recurrentes). El usuario creerá que siguen enviándose.
+                          </div>
+                       </div>
+                       
+                       <label class="relative inline-flex items-center cursor-pointer shrink-0 ml-4">
+                         <input type="checkbox" [checked]="selectedUser()?.is_shadowbanned" (change)="toggleShadowban($event)" class="sr-only peer">
+                         <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600"></div>
+                       </label>
+                    </div>
+                 </div>
+
               </div>
 
               <!-- Modal Footer -->
@@ -267,6 +292,28 @@ export class UserManagementComponent implements OnInit {
 
   closeEditModal() {
     this.selectedUser.set(null);
+  }
+
+  async toggleShadowban(event: any) {
+     const user = this.selectedUser();
+     if (!user) return;
+     
+     const isChecked = event.target.checked;
+     if (confirm(`¿Estás seguro que deseas ${isChecked ? 'aplicar' : 'quitar'} SHADOWBAN a ${user.full_name}?`)) {
+        this.isProcessing.set(true);
+        const success = await this.userService.toggleShadowban(user.id, isChecked);
+        if (success) {
+           this.toastService.success(`Shadowban ${isChecked ? 'Activado' : 'Desactivado'}`);
+           // Update local selection reflection implicitly by reliance on userService state (or we patch it directly)
+           this.selectedUser.set({ ...user, is_shadowbanned: isChecked });
+        } else {
+           this.toastService.error('Error al modificar shadowban');
+           event.target.checked = !isChecked; // Revert visually
+        }
+        this.isProcessing.set(false);
+     } else {
+        event.target.checked = !isChecked; // Revert visually
+     }
   }
 
   setRole(role: string) {

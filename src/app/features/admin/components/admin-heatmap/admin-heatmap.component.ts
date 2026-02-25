@@ -21,12 +21,12 @@ import { Logger } from '../../../../core/utils/logger';
               
               <div class="space-y-2">
                  <label class="flex items-center gap-2 text-sm text-slate-300 cursor-pointer hover:text-white">
-                    <input type="checkbox" [checked]="showHeatmap()" (change)="toggleHeatmap()" class="accent-orange-500 w-4 h-4">
+                    <input type="checkbox" [checked]="showHeatmap()" (change)="toggleHeatmap($event)" class="accent-orange-500 w-4 h-4">
                     Mapa de Calor (Densidad)
                  </label>
                  
                  <label class="flex items-center gap-2 text-sm text-slate-300 cursor-pointer hover:text-white">
-                    <input type="checkbox" [checked]="showClusters()" (change)="toggleClusters()" class="accent-red-500 w-4 h-4">
+                    <input type="checkbox" [checked]="showClusters()" (change)="toggleClusters($event)" class="accent-red-500 w-4 h-4">
                     Zonas Calientes (Clusters)
                  </label>
               </div>
@@ -120,7 +120,6 @@ export class AdminHeatmapComponent implements AfterViewInit, OnDestroy {
 
   private async initMap() {
     this.L = await import('leaflet');
-    await import('leaflet.heat');
     const L = this.L;
 
     this.clusterLayer = new L.FeatureGroup();
@@ -251,7 +250,7 @@ export class AdminHeatmapComponent implements AfterViewInit, OnDestroy {
   }
   // ... rest of methods unchanged ...
 
-  toggleHeatmap() {
+  toggleHeatmap(event?: Event) {
     this.showHeatmap.update(v => !v);
     if (!this.map || !this.heatLayer) return;
     
@@ -262,7 +261,7 @@ export class AdminHeatmapComponent implements AfterViewInit, OnDestroy {
     }
   }
 
-  toggleClusters() {
+  toggleClusters(event?: Event) {
     this.showClusters.update(v => !v);
     if (!this.map) return;
 

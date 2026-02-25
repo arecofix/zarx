@@ -93,8 +93,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     if (!isPlatformBrowser(this.platformId)) return;
 
     // Dynamic Imports
-    const L = await import('leaflet');
-    await import('leaflet-draw'); 
+    const L = await import('leaflet'); 
 
     this.drawnItems = new L.FeatureGroup();
 
@@ -113,7 +112,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     this.map.addLayer(this.drawnItems);
     
     // Initialize Draw Control for creating Zones
-    const drawControl = new L.Control.Draw({
+    const drawControl = new (L.Control as any).Draw({
       edit: {
         featureGroup: this.drawnItems,
         remove: true
@@ -137,7 +136,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
 
     // Event Listeners for Draw
     // @ts-ignore
-    this.map.on(L.Draw.Event.CREATED, (e: any) => {
+    this.map.on((L as any).Draw.Event.CREATED, (e: any) => {
       const layer = e.layer;
       this.drawnItems.addLayer(layer);
       

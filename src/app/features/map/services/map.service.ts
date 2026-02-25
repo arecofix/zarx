@@ -1,6 +1,6 @@
 import { Injectable, inject, PLATFORM_ID, signal, effect } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
-import * as L from 'leaflet';
+import type * as L from 'leaflet';
 import { LocationService } from '../../../core/services/location.service';
 
 import { Alert } from '../../../core/models/index';
@@ -12,6 +12,7 @@ export class MapService {
   private platformId = inject(PLATFORM_ID);
   public map: L.Map | undefined;
   private userMarker: L.Marker | undefined;
+  private L: any;
   
   locationService = inject(LocationService);
 
@@ -22,7 +23,7 @@ export class MapService {
   errorMessage = signal<string | null>(null);
 
   constructor() {
-    this.fixLeafletIcons();
+    // Icons fixed on map init now
     
     // Effect to update map when location changes
     effect(() => {
@@ -34,8 +35,11 @@ export class MapService {
     });
   }
 
-  initMap(elementId: string): void {
+  async initMap(elementId: string) {
     if (!isPlatformBrowser(this.platformId)) return;
+    this.L = await import('leaflet');
+    const L = this.L;
+    this.fixLeafletIcons(L);
 
     // 1. Define Dark Matter Tiles
     const darkTiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
@@ -54,11 +58,11 @@ export class MapService {
     });
 
     // 3. Add Listeners for Zoneless Updates
-    this.map.on('moveend', () => {
+    this.map?.on('moveend', () => {
       this.zoomLevel.set(this.map!.getZoom());
     });
 
-    this.map.on('load', () => {
+    this.map?.on('load', () => {
       this.isLoading.set(false);
     });
     
@@ -103,7 +107,8 @@ export class MapService {
   }
 
   updateUserLocation(lat: number, lng: number) {
-    if (!this.map) return;
+    if (!this.map || !this.L) return;
+    const L = this.L;
     
     this.userLocation.set({ lat, lng });
 
@@ -143,7 +148,7 @@ export class MapService {
     }
   }
 
-  private fixLeafletIcons() {
+  private fixLeafletIcons(L: any) {
     if (!isPlatformBrowser(this.platformId)) return;
     
     const iconRetinaUrl = 'assets/marker-icon-2x.png';
@@ -167,7 +172,8 @@ export class MapService {
   private alertMarkers: Map<string, L.Marker> = new Map();
 
   addAlertMarker(alert: Alert) { 
-     if (!this.map) return;
+     if (!this.map || !this.L) return;
+     const L = this.L;
      
      // Parse Location POINT(lng lat)
      // Format: "POINT(-58.123 -34.123)"

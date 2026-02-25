@@ -186,19 +186,18 @@ import { AdminHeatmapComponent } from '../admin-heatmap/admin-heatmap.component'
                       <!-- Status -->
                       <span 
                         class="px-2 py-1 rounded text-xs font-bold"
-                        [class.bg-emerald-900/30]="alert.status === 'OPEN'"
-                        [class.bg-blue-900/30]="alert.status === 'ENGAGED'"
-                        [class.bg-slate-900/30]="alert.status === 'RESOLVED'"
-                        [class.text-emerald-400]="alert.status === 'OPEN'"
-                        [class.text-blue-400]="alert.status === 'ENGAGED'"
-                        [class.text-slate-400]="alert.status === 'RESOLVED'"
+                        [ngClass]="{
+                          'bg-emerald-900/30 text-emerald-400': alert.status === 'OPEN',
+                          'bg-blue-900/30 text-blue-400': alert.status === 'ENGAGED',
+                          'bg-slate-900/30 text-slate-400': alert.status === 'RESOLVED'
+                        }"
                       >
                         {{ alert.status }}
                       </span>
 
                       <!-- Reporter Name -->
                       @if (alert.profiles?.username) {
-                        <span class="text-xs text-slate-500 font-mono">@{{ alert.profiles?.username }}</span>
+                        <span class="text-xs text-slate-500 font-mono">&#64;{{ alert.profiles?.username }}</span>
                       }
 
                       <!-- Panic Badge -->

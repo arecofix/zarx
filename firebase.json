@@ -1,5 +1,6 @@
 {
   "hosting": {
+    "site": "zarx-sec",
     "public": "dist/zarx-system/browser",
     "ignore": [
       "firebase.json",

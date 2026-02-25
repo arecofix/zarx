@@ -59,6 +59,16 @@ export class SosService {
          throw new Error('Usuario no identificado');
       }
 
+      // 1.5 Shadowban Check
+      const profile = this.auth.profile();
+      if (profile?.is_shadowbanned) {
+         Logger.warn(`[SHADOWBAN] Blocked SOS from user ${user.id}`);
+         // Silent simulated success
+         this.activateLocalEmergency();
+         this.toast.success('ALERTA ENVIADA - AYUDA EN CAMINO');
+         return true;
+      }
+
       // 2. Capture Critical Data (Location)
       this.toast.info('Obteniendo ubicación precisa...');
       let pos;

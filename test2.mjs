@@ -1,0 +1,1 @@
+globalThis.module={hot:false}; console.log(module.hot);

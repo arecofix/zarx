@@ -30,10 +30,11 @@ import { ToastService } from '../../../../core/services/toast.service';
             <div>
               <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Nombre de Usuario</label>
               <div class="relative mt-1">
-                <span class="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-500 font-bold">@</span>
+                <span class="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-500 font-bold">&#64;</span>
                 <input 
                   type="text" 
-                  [(ngModel)]="username"
+                  [ngModel]="username()"
+                  (ngModelChange)="username.set($event)"
                   (input)="checkUsername()"
                   class="w-full bg-slate-950 border border-slate-800 rounded-xl py-4 pl-10 pr-4 text-white text-sm focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-all font-mono"
                   placeholder="ej: guardian_areco"

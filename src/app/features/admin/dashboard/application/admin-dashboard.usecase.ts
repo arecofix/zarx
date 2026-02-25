@@ -162,7 +162,6 @@ export class AdminDashboardUseCase {
       if (!this.heatmapLayer) {
         try {
           const L = await import('leaflet');
-          await import('leaflet.heat');
 
           const rawData = await this.reportService.getHeatmapData();
           const points = rawData.map(d => [d.latitude, d.longitude, d.intensity]);

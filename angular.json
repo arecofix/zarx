@@ -17,11 +17,21 @@
         "build": {
           "builder": "@angular/build:application",
           "options": {
+            "outputPath": "dist/zarx-system",
+            "index": "src/index.html",
             "browser": "src/main.ts",
             "tsConfig": "tsconfig.app.json",
             "inlineStyleLanguage": "css",
+            "polyfills": ["zone.js"],
             "allowedCommonJsDependencies": [
-              "leaflet"
+              "leaflet",
+              "leaflet-draw",
+              "leaflet.heat"
+            ],
+            "externalDependencies": [
+              "leaflet",
+              "leaflet-draw",
+              "leaflet.heat"
             ],
             "assets": [
               {
@@ -55,9 +65,7 @@
               "node_modules/leaflet.heat/dist/leaflet-heat.js"
             ],
             "server": "src/main.server.ts",
-            "prerender": {
-              "routesFile": "routes.txt"
-            },
+            "prerender": false,
             "ssr": {
               "entry": "server.ts"
             }

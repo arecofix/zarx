@@ -90,6 +90,29 @@ export class UserService {
   }
 
   /**
+   * Toggles the shadowban status of a user.
+   */
+  async toggleShadowban(userId: string, isShadowbanned: boolean): Promise<boolean> {
+    try {
+      const { error } = await this.supabase
+        .from('profiles')
+        .update({ is_shadowbanned: isShadowbanned })
+        .eq('id', userId);
+
+      if (error) throw error;
+
+      this.users.update(current => 
+        current.map(u => u.id === userId ? { ...u, is_shadowbanned: isShadowbanned } : u)
+      );
+
+      return true;
+    } catch (e) {
+      console.error('Error toggling shadowban:', e);
+      return false;
+    }
+  }
+
+  /**
    * Search users by email or username (Local filtering for now if list is small, 
    * or can be converted to RPC/DB query for large datasets).
    */

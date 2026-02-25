@@ -66,7 +66,7 @@ interface NeighborAlert {
              <div class="absolute bottom-10 text-center w-full px-8">
                 <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 shadow-xl">
                    <p class="text-sm text-slate-400 mb-1">Víctima solicita ayuda</p>
-                   <p class="text-lg font-bold text-white mb-4">@{{ currentAlert()?.username }}</p>
+                   <p class="text-lg font-bold text-white mb-4">&#64;{{ currentAlert()?.username }}</p>
                    <button class="w-full py-3 bg-emerald-600 rounded-lg font-bold shadow-lg shadow-emerald-900/50">
                       📞 LLAMAR 911
                    </button>
