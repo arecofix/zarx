@@ -15,20 +15,4 @@
    - URL: `https://www.arecofix.com.ar/celular`
    - Status Code: `301`
 
-**Si usas Firebase Hosting multisite:**
-En `firebase.json`:
 
-```json
-{
-  "hosting": [
-    {
-      "target": "celulares",
-      "redirects": [
-        { "source": "**", "destination": "https://www.arecofix.com.ar/celular", "type": 301 }
-      ]
-    }
-  ]
-}
-```
-
-_Nota: Requiere configurar el target en `.firebaserc`._

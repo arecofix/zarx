@@ -1,19 +1,9 @@
 // @ts-nocheck
-// Follow this setup guide to integrate the Deno runtime with your Supabase project:
-// https://supabase.com/docs/guides/functions
+// Supabase Edge Function: notify-neighbors
+// Notifies nearby devices using standard WebPush / Supabase alerts
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
-import admin from "npm:firebase-admin@^11.0.0"
-
-// Init Firebase Admin (Check if already initialized to avoid cold start errors)
-const serviceAccount = JSON.parse(Deno.env.get('FIREBASE_SERVICE_ACCOUNT') ?? '{}')
-
-if (admin.apps.length === 0) {
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
-  })
-}
 
 serve(async (req: Request) => {
   // 1. Verify Request
@@ -30,8 +20,7 @@ serve(async (req: Request) => {
   )
 
   try {
-    // 2. Find Neighbors using RPC
-    // We search within 500 meters
+    // 2. Find Neighbors using RPC within 500 meters
     const { data: tokens, error } = await supabase.rpc('get_nearby_device_tokens', {
        alert_lat: record.latitude,
        alert_lng: record.longitude,
@@ -44,35 +33,27 @@ serve(async (req: Request) => {
        return new Response(JSON.stringify({ message: 'No neighbors found' }), { status: 200 })
     }
 
-    const distinctTokens = tokens.map((t: any) => t.fcm_token)
-
-    // 3. Send Push Notification
-    // We send a "Multicast" message
-    const message = {
-      tokens: distinctTokens,
-      notification: {
-        title: record.type === 'SOS' ? '🚨 ALERTA SOS CERCANA' : '⚠️ ALERTA DE SEGURIDAD',
-        body: `Incidente reportado a ${500}m de tu ubicación. Revisa el mapa.`
-      },
+    // 3. Insert in-app alert records for neighbors
+    const alertInserts = tokens.map((t: any) => ({
+      user_id: t.user_id,
+      title: record.type === 'SOS' ? '🚨 ALERTA SOS CERCANA' : '⚠️ ALERTA DE SEGURIDAD',
+      body: `Incidente reportado a 500m de tu ubicación. Revisa el mapa.`,
       data: {
         alertId: record.id,
-        lat: String(record.latitude),
-        lng: String(record.longitude),
+        lat: record.latitude,
+        lng: record.longitude,
         type: record.type
       },
-      android: {
-        priority: 'high',
-        notification: {
-           sound: 'default',
-           channelId: 'zarx_critical_channel'
-        }
-      }
+      read: false,
+      created_at: new Date().toISOString()
+    }))
+
+    if (alertInserts.length > 0) {
+      await supabase.from('notifications').insert(alertInserts)
     }
 
-    const response = await admin.messaging().sendEachForMulticast(message)
-
     return new Response(
-      JSON.stringify({ success: true, sent_count: response.successCount }),
+      JSON.stringify({ success: true, notified_count: alertInserts.length }),
       { headers: { "Content-Type": "application/json" } }
     )
 
