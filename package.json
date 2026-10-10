@@ -6,7 +6,6 @@
     "start": "ng serve",
     "build": "ng build",
     "postbuild": "node -e \"const fs = require('fs'); fs.existsSync('dist/zarx-system/browser/index.csr.html') && fs.copyFileSync('dist/zarx-system/browser/index.csr.html', 'dist/zarx-system/browser/index.html')\"",
-    "postinstall": "node patch-angular-fire.js",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "serve:ssr": "node dist/zarx-system/server/server.mjs",
@@ -29,7 +28,6 @@
     "@angular/common": "^19.1.5",
     "@angular/compiler": "^19.1.5",
     "@angular/core": "^19.1.5",
-    "@angular/fire": "^7.0.4",
     "@angular/forms": "^19.1.5",
     "@angular/platform-browser": "^19.1.5",
     "@angular/platform-server": "^19.1.5",
@@ -52,7 +50,7 @@
     "@types/qrcode": "^1.5.6",
     "autoprefixer": "^10.4.24",
     "express": "^5.2.1",
-    "firebase": "^12.8.0",
+    "ionicons": "^8.1.0",
     "jwt-decode": "^4.0.0",
     "leaflet": "^1.9.4",
     "leaflet-draw": "^1.0.4",
@@ -61,8 +59,7 @@
     "qrcode": "^1.5.4",
     "rxjs": "~7.8.0",
     "tailwindcss": "^4.1.18",
-    "tslib": "^2.3.0",
-    "zone.js": "^0.16.0"
+    "tslib": "^2.3.0"
   },
   "devDependencies": {
     "@angular/build": "^19.1.9",
@@ -72,6 +69,7 @@
     "@types/jasmine": "~5.1.0",
     "@types/leaflet": "^1.9.21",
     "@types/leaflet.heat": "^0.2.5",
+    "cypress": "^16.1.1",
     "jasmine-core": "~5.8.0",
     "karma": "~6.4.0",
     "karma-chrome-launcher": "~3.2.0",

@@ -35,9 +35,14 @@
     {
       "name": "api-performance",
       "urls": [
+        "https://*.arecofix.com.ar/**",
+        "https://db.arecofix.com.ar/**",
+        "https://server.arcgisonline.com/**",
+        "https://*.arcgisonline.com/**",
+        "https://tile.openstreetmap.org/**",
+        "https://*.tile.openstreetmap.org/**",
         "https://*.supabase.co/**",
         "https://*.googleapis.com/**",
-        "https://*.basemaps.cartocdn.com/**",
         "https://www.googletagmanager.com/**",
         "https://images.unsplash.com/**",
         "https://grainy-gradients.vercel.app/**"

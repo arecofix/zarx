@@ -162,7 +162,11 @@ export class ReputationService {
    * Get rank info for a score
    */
   getRankInfo(score: number): ReputationRankInfo {
-    return this.RANKS.find(r => score >= r.minScore && score <= r.maxScore) || this.RANKS[0];
+    const safeScore = Math.max(0, score ?? 0);
+    if (safeScore >= 800) {
+      return this.RANKS[3]; // VIGILANTE
+    }
+    return this.RANKS.find(r => safeScore >= r.minScore && safeScore <= r.maxScore) || this.RANKS[0];
   }
 
   /**

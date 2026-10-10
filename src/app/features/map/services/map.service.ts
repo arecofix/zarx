@@ -2,8 +2,10 @@ import { Injectable, inject, PLATFORM_ID, signal, effect } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import type * as L from 'leaflet';
 import { LocationService } from '../../../core/services/location.service';
+import { getLeaflet } from '../../../core/utils/leaflet.util';
 
 import { Alert } from '../../../core/models/index';
+import { AppConstants } from '../../../core/constants/app.constants';
 
 @Injectable({
   providedIn: 'root'
@@ -37,23 +39,24 @@ export class MapService {
 
   async initMap(elementId: string) {
     if (!isPlatformBrowser(this.platformId)) return;
-    this.L = await import('leaflet');
+    this.L = await getLeaflet(this.platformId);
+    if (!this.L || typeof this.L.map !== 'function') return;
     const L = this.L;
     this.fixLeafletIcons(L);
 
-    // 1. Define Dark Matter Tiles
-    const darkTiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-      subdomains: 'abcd',
+    // 1. Define Dark Matter Tiles (Esri Dark Canvas, unwatermarked and high-performance)
+    const darkTiles = L.tileLayer(AppConstants.MAP.TILES.ARCGIS_DARK, {
+      attribution: AppConstants.MAP.ATTRIBUTION.ARCGIS,
+      maxNativeZoom: 16,
       maxZoom: 20
     });
 
-    // 2. Initialize Map instance
+    // 2. Initialize Map instance (Operational Center: Marcos Paz)
     this.map = L.map(elementId, {
-      center: [-34.6037, -58.3816], // Default Center
+      center: AppConstants.MAP.DEFAULT_CENTER,
       zoom: this.zoomLevel(),
       layers: [darkTiles],
-      zoomControl: false, // We will build custom UI
+      zoomControl: false,
       attributionControl: false 
     });
 
@@ -94,13 +97,13 @@ export class MapService {
       } else {
          console.warn('Could not acquire location. Using default fallback.');
          this.errorMessage.set('Could not detect location. Using Default View.');
-         this.centerMap(-34.6037, -58.3816);
+         this.centerMap(AppConstants.CONFIG.LOCATION.DEFAULT_LAT, AppConstants.CONFIG.LOCATION.DEFAULT_LNG);
       }
     } catch (err) {
       console.error('locateUser unexpected error:', err);
       // Fallback on crash
       this.errorMessage.set('GPS Error. Using Default View.');
-      this.centerMap(-34.6037, -58.3816);
+      this.centerMap(AppConstants.CONFIG.LOCATION.DEFAULT_LAT, AppConstants.CONFIG.LOCATION.DEFAULT_LNG);
     } finally {
       this.isLoading.set(false);
     }

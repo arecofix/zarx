@@ -3,6 +3,8 @@ import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { AnalyticsService, Hotspot } from '../../../../core/services/analytics.service';
 import { HeatmapService } from '../../../../core/services/heatmap.service';
 import { Logger } from '../../../../core/utils/logger';
+import { getLeaflet } from '../../../../core/utils/leaflet.util';
+import { AppConstants } from '../../../../core/constants/app.constants';
 
 @Component({
   selector: 'app-admin-heatmap',
@@ -119,21 +121,22 @@ export class AdminHeatmapComponent implements AfterViewInit, OnDestroy {
   }
 
   private async initMap() {
-    this.L = await import('leaflet');
+    if (!isPlatformBrowser(this.platformId) || !this.mapContainer?.nativeElement) return;
+    this.L = await getLeaflet(this.platformId);
+    if (!this.L || typeof this.L.map !== 'function') return;
     const L = this.L;
 
     this.clusterLayer = new L.FeatureGroup();
 
-    // Default center for Marcos Paz aprox
-    const lat = -34.7709;
-    const lng = -58.8335;
-
+    // Operational center for Marcos Paz
     this.map = L.map(this.mapContainer.nativeElement, {
         zoomControl: false
-    }).setView([lat, lng], 13);
+    }).setView(AppConstants.MAP.DEFAULT_CENTER, AppConstants.MAP.DEFAULT_ZOOM);
 
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-      maxZoom: 19
+    L.tileLayer(AppConstants.MAP.TILES.ARCGIS_DARK, {
+      maxNativeZoom: 16,
+      maxZoom: 19,
+      attribution: AppConstants.MAP.ATTRIBUTION.ARCGIS
     }).addTo(this.map);
 
     this.clusterLayer.addTo(this.map);

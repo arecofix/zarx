@@ -347,13 +347,18 @@ export class HomeComponent implements OnInit {
       // Reactive Profile Updates
       effect(() => {
          const profile = this.authService.profile();
-         if (profile) {
-            if (!profile.username) this.showIdentityOnboarding.set(true);
-            this.userRole.set(profile.role ? profile.role.toUpperCase() : 'CIUDADANO');
-            this.userName.set(profile.username || profile.full_name || 'Agente'); 
-            if (profile.avatar_url) {
-               this.userAvatar.set(profile.avatar_url);
-            }
+         const user = this.authService.currentUser();
+         const userMeta = user?.user_metadata;
+         if (profile || user) {
+            if (profile && !profile.username && !profile.full_name) this.showIdentityOnboarding.set(true);
+            const role = profile?.role || userMeta?.['role'] || 'CIUDADANO';
+            const name = profile?.username || profile?.full_name || userMeta?.['full_name'] || userMeta?.['name'] || 'Agente';
+            const avatar = profile?.avatar_url || userMeta?.['avatar_url'] || userMeta?.['picture'] || AppConstants.ASSETS.IMAGES.AVATAR_PLACEHOLDER;
+            
+            this.userRole.set(role.toUpperCase());
+            this.userName.set(name); 
+            this.userAvatar.set(avatar);
+            this.imgLoadError.set(false);
          }
       }, { injector: this.injector });
       

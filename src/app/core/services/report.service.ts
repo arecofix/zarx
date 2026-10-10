@@ -479,16 +479,45 @@ export class ReportService {
   }
 
   async getNearbyReports(lat: number, lon: number, radiusMeters: number = 2000): Promise<Report[]> {
-    const { data, error } = await this.supabase.rpc('get_alerts_in_radius', {
-      center_lat: lat,
-      center_lng: lon,
-      radius_meters: radiusMeters
-    });
-    if (error) {
-      console.warn('Error fetching nearby reports:', error.message);
-      return [];
+    try {
+      const { data, error } = await this.supabase.rpc('get_alerts_in_radius', {
+        center_lat: lat,
+        center_lng: lon,
+        radius_meters: radiusMeters
+      });
+      if (error) {
+        console.warn('⚠️ Supabase RPC error fetching nearby reports:', error.message);
+        return this.loadLocalReportsFallback();
+      }
+      const reports = (data || []).map(this.mapReportLocation);
+      this.saveLocalReportsFallback(reports);
+      return reports;
+    } catch (err: any) {
+      console.warn('📡 Network/DNS error fetching nearby reports. Activating offline fallback:', err?.message || err);
+      return this.loadLocalReportsFallback();
     }
-    return (data || []).map(this.mapReportLocation);
+  }
+
+  private loadLocalReportsFallback(): Report[] {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const cached = localStorage.getItem('zarx_cached_reports');
+        if (cached) return JSON.parse(cached);
+      }
+    } catch (e) {
+      console.warn('Error reading offline cached reports:', e);
+    }
+    return [];
+  }
+
+  private saveLocalReportsFallback(reports: Report[]): void {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage && reports.length > 0) {
+        localStorage.setItem('zarx_cached_reports', JSON.stringify(reports));
+      }
+    } catch (e) {
+      console.warn('Error saving offline cached reports:', e);
+    }
   }
 
   /**

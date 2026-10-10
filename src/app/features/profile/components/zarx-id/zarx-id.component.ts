@@ -1,8 +1,9 @@
-import { Component, OnInit, OnDestroy, inject, signal, effect } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, signal, effect, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IdentityService } from '../../../../core/services/identity.service';
 import { ReputationService } from '../../../../core/services/reputation.service';
 import { AuthService } from '../../../../core/services/auth.service';
+import { AppConstants } from '../../../../core/constants/app.constants';
 
 @Component({
   selector: 'app-zarx-id',
@@ -40,7 +41,7 @@ import { AuthService } from '../../../../core/services/auth.service';
           <!-- Avatar & Rank -->
           <div class="relative mb-6">
              <div class="w-24 h-24 rounded-full border-2 border-(--rank-color) p-1 relative">
-                <img [src]="userAvatar() || 'assets/images/placeholder_avatar.png'" class="w-full h-full rounded-full object-cover bg-slate-800">
+                <img [src]="userAvatar() || placeholderAvatar" class="w-full h-full rounded-full object-cover bg-slate-800" (error)="onAvatarError($event)">
                 
                 <!-- Rank Icon Badge -->
                 <div class="absolute -bottom-2 -right-2 w-10 h-10 rounded-full bg-slate-900 border border-slate-700 flex items-center justify-center text-xl shadow-lg">
@@ -114,31 +115,40 @@ export class ZarxIdComponent implements OnInit, OnDestroy {
   identityService = inject(IdentityService);
   reputationService = inject(ReputationService);
   private authService = inject(AuthService);
+  private elementRef = inject(ElementRef);
 
+  readonly placeholderAvatar = AppConstants.ASSETS.IMAGES.AVATAR_PLACEHOLDER;
   userAvatar = signal<string | null>(null);
   userName = signal<string | null>(null);
 
   constructor() {
-    // Update CSS Variable for Rank Color
+    // Update CSS Variable for Rank Color on host safely
     effect(() => {
        const info = this.reputationService.rank();
        const hex = this.getHexColor(info.rank);
-       
-       const host = document.querySelector('app-zarx-id') as HTMLElement;
-       if (host) {
-         host.style.setProperty('--rank-color', hex);
-       }
+       this.elementRef.nativeElement.style.setProperty('--rank-color', hex);
     });
 
-    // Load user data
-    const user = this.authService.currentUser();
-    if (user?.user_metadata) {
-       this.userAvatar.set(user.user_metadata['avatar_url']);
-       this.userName.set(user.user_metadata['full_name']);
-    }
+    // Reactive user data loader
+    effect(() => {
+       const profile = this.authService.profile();
+       const user = this.authService.currentUser();
+       const meta = user?.user_metadata;
+       
+       const avatar = profile?.avatar_url || meta?.['avatar_url'] || meta?.['picture'] || this.placeholderAvatar;
+       const name = profile?.username || profile?.full_name || meta?.['full_name'] || meta?.['name'] || 'Ciudadano';
+
+       this.userAvatar.set(avatar);
+       this.userName.set(name);
+    });
+  }
+
+  onAvatarError(event: Event) {
+    (event.target as HTMLImageElement).src = this.placeholderAvatar;
   }
 
   ngOnInit() {
+    this.reputationService.loadCurrentScore();
     this.identityService.generateIdentityQr();
   }
 

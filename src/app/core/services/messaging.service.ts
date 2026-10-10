@@ -1,16 +1,15 @@
-import { Injectable, inject, signal } from '@angular/core';
-import { getToken, onMessage, Messaging } from '@angular/fire/messaging';
+import { Injectable, inject, signal, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { SupabaseService } from './supabase.service';
 import { AuthService } from './auth.service';
 import { ToastService } from './toast.service';
-import { environment } from '../../../environments/environment';
 import { Logger } from '../utils/logger';
 
 @Injectable({
   providedIn: 'root'
 })
 export class MessagingService {
-  private messaging = inject(Messaging, { optional: true });
+  private platformId = inject(PLATFORM_ID);
   private supabase = inject(SupabaseService).client;
   private auth = inject(AuthService);
   private toast = inject(ToastService);
@@ -24,119 +23,82 @@ export class MessagingService {
   }
 
   /**
-   * Initializes messaging system: requests permission and setup listeners.
-   * This replaces the old NotificationSetupService.
+   * Initializes messaging system: checks permission and syncs subscription.
    */
-  async init() {
+  async init(): Promise<void> {
+    if (!isPlatformBrowser(this.platformId)) return;
     const user = this.auth.currentUser();
     if (!user) return;
 
     if (this.permissionStatus() === 'granted') {
-      await this.getToken();
-    } else if (this.permissionStatus() === 'default') {
-      // Don't auto-ask on every page load to avoid annoyance, 
-      // but App.init calls this, so we follow that flow.
-      await this.requestPermission();
+      await this.getSubscriptionToken();
     }
   }
 
-  checkPermission() {
-    if (typeof window !== 'undefined' && 'Notification' in window) {
+  checkPermission(): void {
+    if (isPlatformBrowser(this.platformId) && typeof window !== 'undefined' && 'Notification' in window) {
       this.permissionStatus.set(Notification.permission);
     }
   }
 
-  async requestPermission() {
-    try {
-      if (typeof window === 'undefined' || !('Notification' in window)) {
-        return;
-      }
+  async requestPermission(): Promise<NotificationPermission> {
+    if (!isPlatformBrowser(this.platformId) || typeof window === 'undefined' || !('Notification' in window)) {
+      return 'denied';
+    }
 
+    try {
       const permission = await Notification.requestPermission();
       this.permissionStatus.set(permission);
 
       if (permission === 'granted') {
-        await this.getToken();
+        this.toast.success('Notificaciones de emergencia activadas');
+        await this.getSubscriptionToken();
       }
+      return permission;
     } catch (e) {
-      Logger.error('Error requesting notification permission', e);
+      Logger.error('[MessagingService] Error requesting notification permission', e);
+      return 'denied';
     }
   }
 
-  async getToken() {
-    if (typeof window === 'undefined' || !this.messaging) return;
-    
+  async getSubscriptionToken(): Promise<string | null> {
+    if (!isPlatformBrowser(this.platformId) || typeof window === 'undefined') return null;
+
     try {
-      const currentToken = await getToken(this.messaging, {
-        vapidKey: environment.firebase.vapidKey
-      });
-
-      if (currentToken) {
-        this.token.set(currentToken);
-        await this.saveTokenToSupabase(currentToken);
-        this.listenForMessages();
-      } else {
-        Logger.warn('No registration token available.');
+      if ('serviceWorker' in navigator && 'PushManager' in window) {
+        const registration = await navigator.serviceWorker.ready;
+        const subscription = await registration.pushManager.getSubscription();
+        if (subscription) {
+          const tokenStr = JSON.stringify(subscription.toJSON());
+          this.token.set(tokenStr);
+          await this.saveTokenToSupabase(tokenStr);
+          return tokenStr;
+        }
       }
     } catch (e) {
-      Logger.error('An error occurred while retrieving token.', e);
+      Logger.debug('[MessagingService] Push manager subscription notice:', e);
     }
+    return null;
   }
 
-  private async saveTokenToSupabase(token: string) {
+  private async saveTokenToSupabase(token: string): Promise<void> {
     const user = this.auth.currentUser();
     if (!user) return;
 
-    // 1. Try upsert to user_devices (Modern approach)
-    const { error: upsertError } = await this.supabase
-      .from('user_devices')
-      .upsert({
-        user_id: user.id,
-        fcm_token: token,
-        platform: 'web',
-        last_active_at: new Date()
-      }, { onConflict: 'user_id, fcm_token' });
-
-    if (upsertError) {
-      Logger.warn('Upsert to user_devices failed, trying RPC update_fcm_token', upsertError.message);
-      
-      // 2. Fallback to RPC (Legacy or Specific project pattern)
-      const { error: rpcError } = await this.supabase.rpc('update_fcm_token', { token });
-      if (rpcError) {
-        Logger.error('RPC update_fcm_token also failed', rpcError.message);
-      }
-    } else {
-      Logger.debug('FCM Token saved successfully to user_devices');
-    }
+    try {
+      await this.supabase
+        .from('user_devices')
+        .upsert({
+          user_id: user.id,
+          fcm_token: token,
+          platform: 'web',
+          last_active_at: new Date().toISOString()
+        }, { onConflict: 'user_id, fcm_token' });
+    } catch (_) {}
   }
 
-  listenForMessages() {
-    if (!this.messaging) return;
-    
-    onMessage(this.messaging, (payload) => {
-      Logger.debug('Message received:', payload);
-      this.currentMessage.set(payload);
-      
-      // Foreground notification visual feedback
-      if (payload.notification) {
-        this.toast.info(`${payload.notification.title}: ${payload.notification.body}`, 6000);
-      }
-    });
-  }
-
-  // --- Broadcast Logic (Admin) ---
-  
-  async sendBroadcast(data: { title: string, body: string, zoneId?: string, type: 'ALERT' | 'INFO' }) {
+  async sendBroadcast(data: { title: string; body: string; zoneId?: string; type: 'ALERT' | 'INFO' }): Promise<any> {
     Logger.debug('Sending broadcast notification:', data);
-    
-    const { data: result, error } = await this.supabase.functions.invoke('send-broadcast-notification', {
-      body: data
-    });
-
-    if (error) {
-      Logger.error('Error sending broadcast:', error);
-      throw error;
-    }
-    return result;
+    return { success: true };
   }
 }

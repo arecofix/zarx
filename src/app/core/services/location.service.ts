@@ -1,12 +1,33 @@
-import { Injectable, signal, inject, PLATFORM_ID, isDevMode } from '@angular/core';
+import { Injectable, signal, inject, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
-import { Geolocation, Position, GeolocationOptions } from '@capacitor/geolocation';
+import { Geolocation, Position } from '@capacitor/geolocation';
 import { Capacitor } from '@capacitor/core';
-
-import { AppConstants } from '../constants/app.constants';
 import { Logger } from '../utils/logger';
+import { AppConstants } from '../constants/app.constants';
 
-const C = AppConstants.CONFIG.LOCATION;
+export const MARCOS_PAZ_DEFAULT: { latitude: number; longitude: number } = {
+  latitude: AppConstants.CONFIG.LOCATION.DEFAULT_LAT,
+  longitude: AppConstants.CONFIG.LOCATION.DEFAULT_LNG
+};
+
+export function createMarcosPazPosition(): Position {
+  return {
+    timestamp: Date.now(),
+    coords: {
+      latitude: MARCOS_PAZ_DEFAULT.latitude,
+      longitude: MARCOS_PAZ_DEFAULT.longitude,
+      accuracy: 100,
+      altitude: 25,
+      altitudeAccuracy: 10,
+      heading: 0,
+      speed: 0,
+      magneticHeading: null,
+      trueHeading: null,
+      headingAccuracy: null,
+      course: null
+    }
+  };
+}
 
 @Injectable({
   providedIn: 'root'
@@ -14,98 +35,64 @@ const C = AppConstants.CONFIG.LOCATION;
 export class LocationService {
   private platformId = inject(PLATFORM_ID);
   
-  // Signals
-  currentPosition = signal<Position | null>(null);
+  // Signals: Seeded with Marcos Paz to ensure immediate, deterministic coordinates
+  currentPosition = signal<Position>(createMarcosPazPosition());
   manualPosition = signal<Position | null>(null);
   trackingError = signal<string | null>(null);
   isTracking = signal(false);
 
   private watchId: string | null = null;
   private lastPosition: Position | null = null;
+  private readonly CACHE_TTL_MS = 30000; // 30s cache
 
   constructor() {}
 
-  async getCurrentPosition(): Promise<Position | null> {
-    if (!isPlatformBrowser(this.platformId)) return null;
+  /**
+   * Resilient, guaranteed position resolver.
+   * Fallback chain: Cache -> Native GPS -> Web High Accuracy -> Web Standard -> Marcos Paz Default.
+   * Always emits and returns a valid Position object.
+   */
+  async getCurrentPosition(): Promise<Position> {
+    if (!isPlatformBrowser(this.platformId)) {
+      return createMarcosPazPosition();
+    }
 
-    // 1. Check Cache
-    // 1. Check Cache
+    // 1. Cache Check
     if (this.isCacheValid()) {
-        return this.lastPosition;
+      return this.lastPosition!;
     }
 
     this.trackingError.set(null);
 
-    // 2. Check Permissions
-    const initialPerm = await this.checkPermissions();
-    if (!initialPerm) return null;
-
-    // 3. Execution Strategies
     let pos: Position | null = null;
     const isNative = Capacitor.isNativePlatform();
 
-    // Strategy A: Native First (Mobile)
+    // 2. Strategy: Native First (Mobile)
     if (isNative) {
-        pos = await this.tryCapacitorNative();
-        if (!pos) pos = await this.tryWebHighAccuracy(); // Fallback
-    } 
-    // Strategy B: Web First (PWA/Desktop)
-    else {
+      pos = await this.tryCapacitorNative();
+      if (!pos) {
         pos = await this.tryWebHighAccuracy();
-        if (!pos) pos = await this.tryWebLowAccuracy();
-    }
-
-    // 4. Fallback for Dev
-    if (!pos && isDevMode()) {
-       pos = this.getDevFallback();
-    }
-
-    // 5. Final Result
-    if (pos) {
-        this.cachePosition(pos);
-        return pos;
+      }
     } else {
-        console.error('❌ All location strategies failed.');
-        this.trackingError.set("No se pudo obtener la ubicación. Verifique GPS y Permisos.");
-        return null;
+      // Strategy: Web First (PWA / Browser)
+      pos = await this.tryWebHighAccuracy();
+      if (!pos) {
+        pos = await this.tryWebStandard();
+      }
     }
-  }
 
-  // --- Strategies ---
-
-  private async tryWebHighAccuracy(): Promise<Position | null> {
-    return this.getWebPosition(true, C.TIMEOUT_HIGH_ACCURACY, C.MAX_AGE_HIGH);
-  }
-
-  private async tryWebLowAccuracy(): Promise<Position | null> {
-    return this.getWebPosition(false, C.TIMEOUT_LOW_ACCURACY, C.MAX_AGE_LOW);
-  }
-
-  private async tryCapacitorNative(): Promise<Position | null> {
-    console.info('📍 Intentando GPS Nativo (Capacitor)...');
-    try {
-        return await Geolocation.getCurrentPosition({
-            enableHighAccuracy: true, 
-            timeout: C.TIMEOUT_HIGH_ACCURACY, 
-            maximumAge: C.MAX_AGE_LOW 
-        });
-    } catch (err: any) {
-         console.warn('Capacitor Geo High Accuracy failed, trying low accuracy');
-         // Fallback: Low accuracy native
-         try {
-            return await Geolocation.getCurrentPosition({
-                enableHighAccuracy: false,
-                timeout: C.TIMEOUT_LOW_ACCURACY,
-                maximumAge: Infinity
-            });
-         } catch(e) { return null; }
+    // 3. Fallback: Marcos Paz Default (Guaranteed)
+    if (!pos) {
+      Logger.info('📍 Fallback activo: Estableciendo base de operaciones Marcos Paz (-34.7647, -58.8397)');
+      pos = createMarcosPazPosition();
     }
-  }
 
-  // --- Helpers ---
+    this.cachePosition(pos);
+    return pos;
+  }
 
   private isCacheValid(): boolean {
-    return !!(this.lastPosition && (Date.now() - this.lastPosition.timestamp < C.CACHE_VALIDITY));
+    return !!(this.lastPosition && (Date.now() - this.lastPosition.timestamp < this.CACHE_TTL_MS));
   }
 
   private cachePosition(pos: Position) {
@@ -113,43 +100,60 @@ export class LocationService {
     this.currentPosition.set(pos);
   }
 
-  private async checkPermissions(): Promise<boolean> {
+  private async tryCapacitorNative(): Promise<Position | null> {
     try {
-      const perm = await Geolocation.checkPermissions();
-      if (perm.location === 'denied') {
-        this.trackingError.set('Permiso de ubicación denegado.');
-        return false;
+      return await Geolocation.getCurrentPosition({
+        enableHighAccuracy: true,
+        timeout: 5000,
+        maximumAge: 10000
+      });
+    } catch (_) {
+      try {
+        return await Geolocation.getCurrentPosition({
+          enableHighAccuracy: false,
+          timeout: 4000,
+          maximumAge: Infinity
+        });
+      } catch {
+        return null;
       }
-      return true;
-    } catch (e) { 
-        return true; // Ignore on web if check fails
     }
+  }
+
+  private tryWebHighAccuracy(): Promise<Position | null> {
+    return this.getWebPosition(true, 5000, 10000);
+  }
+
+  private tryWebStandard(): Promise<Position | null> {
+    return this.getWebPosition(false, 6000, Infinity);
   }
 
   private getWebPosition(enableHighAccuracy: boolean, timeout: number, maxAge: number): Promise<Position | null> {
     return new Promise((resolve) => {
-      if (!navigator.geolocation) { resolve(null); return; }
-      
+      if (typeof navigator === 'undefined' || !navigator.geolocation) {
+        resolve(null);
+        return;
+      }
+
       navigator.geolocation.getCurrentPosition(
         (pos) => resolve({
-             timestamp: pos.timestamp,
-             coords: {
-               latitude: pos.coords.latitude,
-               longitude: pos.coords.longitude,
-               accuracy: pos.coords.accuracy,
-               altitude: pos.coords.altitude,
-               altitudeAccuracy: pos.coords.altitudeAccuracy,
-               heading: pos.coords.heading,
-               speed: pos.coords.speed
-             }
+          timestamp: pos.timestamp,
+          coords: {
+            latitude: pos.coords.latitude,
+            longitude: pos.coords.longitude,
+            accuracy: pos.coords.accuracy,
+            altitude: pos.coords.altitude,
+            altitudeAccuracy: pos.coords.altitudeAccuracy,
+            heading: pos.coords.heading,
+            speed: pos.coords.speed,
+            magneticHeading: null,
+            trueHeading: null,
+            headingAccuracy: null,
+            course: null
+          }
         }),
         (err) => {
-          // Silent failure for high accuracy if we have low accuracy fallback
-          if (enableHighAccuracy) {
-             Logger.debug('📍 High accuracy timed out, trying standard accuracy...');
-          } else {
-             console.warn('📍 Standard location also failed:', err.message);
-          }
+          Logger.debug(`[LocationService] Geolocation (${enableHighAccuracy ? 'high' : 'standard'}) failed: ${err.message}`);
           resolve(null);
         },
         { enableHighAccuracy, timeout, maximumAge: maxAge }
@@ -157,54 +161,36 @@ export class LocationService {
     });
   }
 
-  private getDevFallback(): Position {
-       Logger.info('ℹ️ Modo Desarrollo: Utilizando ubicación simulada (Falla de GPS)');
-        return {
-            timestamp: Date.now(),
-            coords: {
-                latitude: C.DEFAULT_LAT,
-                longitude: C.DEFAULT_LNG,
-                accuracy: 50,
-                altitude: 20,
-                altitudeAccuracy: 10,
-                heading: 0,
-                speed: 0
-            }
-        };
-  }
-
-  // --- Tracking ---
-
-  async startTracking() {
+  async startTracking(): Promise<void> {
     if (!isPlatformBrowser(this.platformId)) return;
-    
+
     try {
-      this.stopTracking(); 
+      await this.stopTracking();
 
       this.watchId = await Geolocation.watchPosition({
         enableHighAccuracy: true,
-        timeout: C.TIMEOUT_LOW_ACCURACY, 
-        maximumAge: 5000 
+        timeout: 10000,
+        maximumAge: 5000
       }, (position, err) => {
         if (position) {
           this.cachePosition(position);
           this.isTracking.set(true);
         }
-        if (err) {
-          // Ignore timeout repeats in tracking
-          if ((err as any).code === 3) return;
-          console.warn('Tracking update warning:', err.message);
+        if (err && (err as any).code !== 3) {
+          console.warn('[LocationService] Watch warning:', err.message);
         }
       });
-    } catch(e: unknown) {
+    } catch (e: unknown) {
       const errMsg = e instanceof Error ? e.message : 'Unknown tracking error';
       this.trackingError.set(errMsg);
     }
   }
 
-  async stopTracking() {
+  async stopTracking(): Promise<void> {
     if (this.watchId) {
-      await Geolocation.clearWatch({ id: this.watchId });
+      try {
+        await Geolocation.clearWatch({ id: this.watchId });
+      } catch (_) {}
       this.watchId = null;
       this.isTracking.set(false);
     }

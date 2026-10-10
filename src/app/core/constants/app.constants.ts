@@ -4,16 +4,19 @@ export const AppConstants = {
   // System Configuration
   CONFIG: {
     LOCATION: {
-      TIMEOUT_HIGH_ACCURACY: 15000,  // Reduced from 30s to 15s for faster fallback
-      TIMEOUT_LOW_ACCURACY: 30000,   // Reduced from 45s to 30s
-      MAX_AGE_HIGH: 30000,           // Increased from 10s to 30s - accept slightly older positions
-      MAX_AGE_LOW: 300000,           // Increased from 120s to 300s (5 minutes)
-      CACHE_VALIDITY: 120000,        // Increased from 60s to 120s (2 minutes)
+      TIMEOUT_HIGH_ACCURACY: 15000,
+      TIMEOUT_LOW_ACCURACY: 30000,
+      MAX_AGE_HIGH: 30000,
+      MAX_AGE_LOW: 300000,
+      CACHE_VALIDITY: 120000,
+      // Operational Base: Marcos Paz, Buenos Aires
       DEFAULT_LAT: -34.7709,
-      DEFAULT_LNG: -58.8335
+      DEFAULT_LNG: -58.8335,
+      DEFAULT_ZOOM: 14
     },
     STORAGE: {
-      BUCKET_EVIDENCE: 'evidence'
+      BUCKET_EVIDENCE: 'evidence',
+      BUCKET_AVATARS: 'avatars'
     },
     EMERGENCY: {
       BROADCAST_DISTANCE_METERS: 500,
@@ -22,8 +25,10 @@ export const AppConstants = {
     },
     ROLES: {
       ADMIN: 'admin',
+      SUPER_ADMIN: 'super_admin',
       RESPONDER: 'responder',
       CIVILIAN: 'civilian',
+      CITIZEN: 'citizen',
       MILITARY: 'military'
     },
     STATUS: {
@@ -34,6 +39,20 @@ export const AppConstants = {
       RESOLVED: 'RESOLVED',
       OPEN: 'OPEN',
       ENGAGED: 'ENGAGED'
+    }
+  },
+
+  // Map Tile & Layer Configurations
+  MAP: {
+    DEFAULT_CENTER: [-34.7709, -58.8335] as [number, number],
+    DEFAULT_ZOOM: 14,
+    TILES: {
+      ARCGIS_DARK: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+      OSM: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
+    },
+    ATTRIBUTION: {
+      ARCGIS: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ',
+      OSM: '&copy; OpenStreetMap contributors'
     }
   },
   
@@ -65,7 +84,7 @@ export const AppConstants = {
     }
   },
 
-  // Assets Paths
+  // Assets Paths & Fallbacks
   ASSETS: {
     AUDIO: {
       SIREN: 'assets/sounds/siren.mp3',
@@ -73,7 +92,8 @@ export const AppConstants = {
       ALERT_BEEP: 'assets/sounds/beep.alert.mp3'
     },
     IMAGES: {
-      AVATAR_PLACEHOLDER: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjOTQxYjgyIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBhdGggZD0iTTIwIDIxdi0yYTQgNCAwIDAgMC00LTRIOGE0IDQgMCAwIDAtNCA0djIiPjwvcGF0aD48Y2lyY2xlIGN4PSIxMiIgY3k9IjciIHI9IjQiPjwvY2lyY2xlPjwvc3ZnPg==',
+      // Guaranteed inline SVG Data URI for avatar placeholder to prevent broken images across SSR and missing assets
+      AVATAR_PLACEHOLDER: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%231e293b" stroke="%2310b981" stroke-width="1.5"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg>',
       MARKER: 'assets/img/marker-icon.png'
     }
   }

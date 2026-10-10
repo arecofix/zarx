@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { AppConstants } from '../../../core/constants/app.constants';
 import { AdminDashboardUseCase } from './application/admin-dashboard.usecase';
 import { IncomingFeedComponent } from './components/incoming-feed/incoming-feed.component';
+import { getLeaflet } from '../../../core/utils/leaflet.util';
 
 @Component({
   selector: 'app-admin-dashboard',
@@ -90,10 +91,11 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   }
 
   async initMap() {
-    if (!isPlatformBrowser(this.platformId)) return;
+    if (!isPlatformBrowser(this.platformId) || !this.mapContainer?.nativeElement) return;
 
-    // Dynamic Imports
-    const L = await import('leaflet'); 
+    // Dynamic Imports via centralized getLeaflet
+    const L = await getLeaflet(this.platformId); 
+    if (!L || typeof L.map !== 'function') return;
 
     this.drawnItems = new L.FeatureGroup();
 
@@ -105,8 +107,10 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       attributionControl: false
     }).setView([lat, lng], 13);
 
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-      maxZoom: 19
+    L.tileLayer(AppConstants.MAP.TILES.ARCGIS_DARK, {
+      maxNativeZoom: 16,
+      maxZoom: 19,
+      attribution: AppConstants.MAP.ATTRIBUTION.ARCGIS
     }).addTo(this.map);
 
     this.map.addLayer(this.drawnItems);

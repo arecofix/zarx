@@ -1,19 +1,27 @@
 import { Injectable, inject } from '@angular/core';
-import { ReputationService, ReputationRankInfo } from './reputation.service';
+import { ReputationService } from './reputation.service';
+import { getRankByScore, getRankByName, RankDefinition } from '../models/rank.model';
 
 export interface Rank {
   name: string;
   minScore: number;
   maxScore: number;
   color: string;
+  textColorClass?: string;
   icon: string;
   benefit: string;
   nextRankName?: string;
 }
 
+export interface RankProgress {
+  currentRank: Rank;
+  progressPercent: number;
+  pointsToNext: number;
+  isMaxLevel: boolean;
+}
+
 /**
- * Gamification facade that delegates to ReputationService for rank data.
- * Provides progress calculation and rank access with UI-friendly labels.
+ * Gamification facade providing C4ISR rank calculations and progression.
  */
 @Injectable({
   providedIn: 'root'
@@ -21,64 +29,49 @@ export interface Rank {
 export class GamificationService {
   private reputation = inject(ReputationService);
 
-  calculateProgress(score: number) {
-    const rankInfo = this.reputation.getRankInfo(score);
-    const rank = this.toRank(rankInfo);
-    const nextRankName = this.getNextRankName(rankInfo.rank);
-
-    if (!nextRankName) {
-       // Max Level
-       return {
-         currentRank: rank,
-         progressPercent: 100,
-         pointsToNext: 0,
-         isMaxLevel: true
-       };
+  calculateProgress(score: number, explicitRankName?: string | null): RankProgress {
+    const safeScore = Math.max(0, score ?? 0);
+    
+    let rankDef: RankDefinition;
+    if (explicitRankName && explicitRankName.trim()) {
+      rankDef = getRankByName(explicitRankName);
+    } else {
+      rankDef = getRankByScore(safeScore);
     }
 
-    const range = rank.maxScore - rank.minScore;
-    const progress = score - rank.minScore;
+    const rank: Rank = {
+      name: rankDef.label,
+      minScore: rankDef.minScore,
+      maxScore: rankDef.maxScore,
+      color: rankDef.color,
+      textColorClass: rankDef.textColorClass,
+      icon: rankDef.icon,
+      benefit: rankDef.benefit,
+      nextRankName: rankDef.nextRankName
+    };
+
+    if (!rankDef.nextRankName || safeScore >= rankDef.maxScore) {
+      return {
+        currentRank: rank,
+        progressPercent: 100,
+        pointsToNext: 0,
+        isMaxLevel: true
+      };
+    }
+
+    const range = Math.max(1, rankDef.maxScore - rankDef.minScore);
+    const progress = safeScore - rankDef.minScore;
     const percent = Math.min(100, Math.max(0, (progress / range) * 100));
 
     return {
-      currentRank: { ...rank, nextRankName },
+      currentRank: rank,
       progressPercent: Math.round(percent),
-      pointsToNext: rank.maxScore - score + 1,
+      pointsToNext: Math.max(0, rankDef.maxScore - safeScore + 1),
       isMaxLevel: false
     };
   }
 
-  getRank(score: number): Rank {
-    return this.toRank(this.reputation.getRankInfo(score));
-  }
-
-  private toRank(info: ReputationRankInfo): Rank {
-    return {
-      name: info.label,
-      minScore: info.minScore,
-      maxScore: info.maxScore,
-      color: info.color,
-      icon: info.icon,
-      benefit: this.getBenefit(info.rank)
-    };
-  }
-
-  private getBenefit(rank: string): string {
-    switch (rank) {
-      case 'SOSPECHOSO': return 'Acceso restringido';
-      case 'OBSERVADO': return 'Reportes requieren doble validación';
-      case 'CIUDADANO_MODELO': return 'Acceso estándar a monitoreo';
-      case 'VIGILANTE': return 'Prioridad de Alerta + Ícono Especial';
-      default: return '';
-    }
-  }
-
-  private getNextRankName(rank: string): string | undefined {
-    switch (rank) {
-      case 'SOSPECHOSO': return 'Observado';
-      case 'OBSERVADO': return 'Ciudadano Modelo';
-      case 'CIUDADANO_MODELO': return 'Vigilante';
-      default: return undefined;
-    }
+  getRank(score: number, explicitRankName?: string | null): Rank {
+    return this.calculateProgress(score, explicitRankName).currentRank;
   }
 }

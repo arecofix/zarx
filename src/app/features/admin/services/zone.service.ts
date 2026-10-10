@@ -1,5 +1,7 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, inject, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { SupabaseService } from '../../../core/services/supabase.service';
+import { getLeaflet } from '../../../core/utils/leaflet.util';
 
 export interface Zone {
   id?: string;
@@ -14,6 +16,7 @@ export interface Zone {
 })
 export class ZoneService {
   private supabase = inject(SupabaseService).client;
+  private platformId = inject(PLATFORM_ID);
 
   /**
    * Guarda una zona en Supabase.
@@ -42,17 +45,20 @@ export class ZoneService {
 
   /**
    * Carga las zonas desde Supabase.
-   * Convierte la respuesta (que puede venir como hex o JSON) a capas de Leaflet.
+   * Convierte la respuesta a capas de Leaflet.
    */
   async loadZones(): Promise<any[]> {
-    // Dynamic import to avoid SSR issues
-    const L = await import('leaflet');
+    if (!isPlatformBrowser(this.platformId)) return [];
 
-    // Truco Robustez: Hacemos un cast explícito en la query para devolver GeoJSON siempre.
-    // Esto evita lidiar con WKB hexadecimal o configuraciones extrañas del servidor.
+    const L = await getLeaflet(this.platformId);
+    if (!L || typeof L.geoJSON !== 'function') {
+      console.warn('[ZoneService] Leaflet geoJSON is not available');
+      return [];
+    }
+
     const { data, error } = await this.supabase
       .from('zones')
-      .select('*, geom_json:geom::json'); // Alias geom_json forzando cast a JSON
+      .select('*, geom_json:geom::json');
 
     if (error) {
       console.error('Error loading zones:', error);

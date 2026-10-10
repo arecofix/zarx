@@ -3,6 +3,8 @@ import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { ZoneService, Zone } from '../../services/zone.service';
+import { getLeaflet } from '../../../../core/utils/leaflet.util';
+import { AppConstants } from '../../../../core/constants/app.constants';
 
 @Component({
   selector: 'app-zone-editor',
@@ -217,21 +219,24 @@ export class ZoneEditorComponent implements OnInit, OnDestroy {
   }
 
   private async initMap() {
-    // Dynamic Imports
-    this.L = await import('leaflet');
+    if (!isPlatformBrowser(this.platformId)) return;
+    this.L = await getLeaflet(this.platformId);
+    if (!this.L || typeof this.L.map !== 'function') return;
     const L = this.L;
 
     this.drawnItems = new L.FeatureGroup();
 
-    // Basic Map Init - Centered on Arecofix aprox
+    // Basic Map Init - Centered on Marcos Paz operational center
     this.map = L.map('zoneMap', {
-       center: [-34.6037, -58.3816], // Buenos Aires Default
-       zoom: 13,
+       center: AppConstants.MAP.DEFAULT_CENTER,
+       zoom: AppConstants.MAP.DEFAULT_ZOOM,
        zoomControl: false
     });
 
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-      attribution: '©OpenStreetMap, ©CartoDB'
+    L.tileLayer(AppConstants.MAP.TILES.ARCGIS_DARK, {
+      maxNativeZoom: 16,
+      maxZoom: 19,
+      attribution: AppConstants.MAP.ATTRIBUTION.ARCGIS
     }).addTo(this.map);
 
     // FeatureGroup to store editable layers

@@ -1,7 +1,7 @@
 import { Component, inject, signal, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { Router, RouterModule } from '@angular/router';
+import { Router, RouterModule, ActivatedRoute } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
@@ -155,6 +155,7 @@ export class LoginComponent {
   private fb = inject(FormBuilder);
   private authService = inject(AuthService);
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
   
   rateLimitCooldown = signal(0);
   private cooldownInterval: ReturnType<typeof setInterval> | undefined;
@@ -174,10 +175,16 @@ export class LoginComponent {
   });
 
   constructor() {
-     // Auto-redirect if already logged in (e.g. after OAuth redirect)
+     // Capture returnUrl from query params if available
+     const queryReturnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
+     if (queryReturnUrl) {
+        this.authService.setReturnUrl(queryReturnUrl);
+     }
+
+     // Auto-redirect if already logged in (e.g. after OAuth redirect or session restoration)
      effect(() => {
         if (this.authService.currentUser()) {
-           this.router.navigate(['/inicio']);
+           this.authService.navigateToReturnUrlOrDefault();
         }
      });
 
@@ -216,7 +223,8 @@ export class LoginComponent {
 
   async signInWithOAuth(provider: 'google' | 'github' | 'facebook') {
      try {
-       await this.authService.signInWithOAuth(provider);
+       const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl') || this.authService.getReturnUrl();
+       await this.authService.signInWithOAuth(provider, returnUrl || undefined);
      } catch (err: unknown) {
        const message = err instanceof Error ? err.message : 'Unknown OAuth error';
        alert('OAuth Error: ' + message);
@@ -233,10 +241,14 @@ export class LoginComponent {
       try {
          // ... (try block logic)
          let error;
+         const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl') || this.authService.getReturnUrl();
+         if (returnUrl) {
+            this.authService.setReturnUrl(returnUrl);
+         }
          
          if (this.isSignUp()) {
             const metadata = { full_name: fullName, phone, username: '' };
-            const res = await this.authService.signUp(email, password, metadata);
+            const res = await this.authService.signUp(email, password, metadata, returnUrl || undefined);
             error = res.error;
             if (!error) alert(`Registration Successful! Please check your email to confirm.`);
          } else {
@@ -247,8 +259,8 @@ export class LoginComponent {
          if (error) throw error;
          
          if (!this.isSignUp()) {
-             // Navigation is handled by AuthService subscription
-             // inside auth.service.ts handleNavigation() method.
+             // Navigation is handled by AuthService subscription / effect
+             this.authService.navigateToReturnUrlOrDefault();
          } 
          
       } catch (err: unknown) {

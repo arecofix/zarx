@@ -20,12 +20,16 @@ export enum ReportType {
 export type ReportingMethod = 'automatic' | 'manual';
 export type LocationMethod = 'gps' | 'manual';
 
+export * from './rank.model';
+
 export interface Profile {
   id: string;
   email?: string;
   full_name?: string;
   phone?: string;
-  role: 'civilian' | 'responder' | 'military' | 'admin';
+  role: 'civilian' | 'responder' | 'military' | 'admin' | 'super_admin' | 'citizen' | string;
+  rank?: string;
+  display_id?: string;
   avatar_url?: string;
   username?: string;
   last_known_location?: string; // geography(POINT)
@@ -34,6 +38,8 @@ export interface Profile {
   invite_code?: string;
   referred_by?: string;
   is_shadowbanned?: boolean;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface Report {

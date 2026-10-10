@@ -22,13 +22,8 @@
             "browser": "src/main.ts",
             "tsConfig": "tsconfig.app.json",
             "inlineStyleLanguage": "css",
-            "polyfills": ["zone.js"],
+            "polyfills": [],
             "allowedCommonJsDependencies": [
-              "leaflet",
-              "leaflet-draw",
-              "leaflet.heat"
-            ],
-            "externalDependencies": [
               "leaflet",
               "leaflet-draw",
               "leaflet.heat"
@@ -59,11 +54,7 @@
               "node_modules/leaflet/dist/leaflet.css",
               "node_modules/leaflet-draw/dist/leaflet.draw.css"
             ],
-            "scripts": [
-              "node_modules/leaflet/dist/leaflet.js",
-              "node_modules/leaflet-draw/dist/leaflet.draw.js",
-              "node_modules/leaflet.heat/dist/leaflet-heat.js"
-            ],
+            "scripts": [],
             "server": "src/main.server.ts",
             "prerender": false,
             "ssr": {

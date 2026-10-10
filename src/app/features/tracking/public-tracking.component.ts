@@ -2,6 +2,8 @@ import { Component, Inject, inject, OnInit, OnDestroy, PLATFORM_ID, ViewChild, E
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { SupabaseService } from '../../core/services/supabase.service';
+import { getLeaflet } from '../../core/utils/leaflet.util';
+import { AppConstants } from '../../core/constants/app.constants';
 
 @Component({
   selector: 'app-public-tracking',
@@ -92,11 +94,17 @@ export class PublicTrackingComponent implements OnInit, OnDestroy {
   }
 
   private async initMap() {
-    this.L = await import('leaflet');
+    if (!isPlatformBrowser(this.platformId) || !this.mapContainer?.nativeElement) return;
+    this.L = await getLeaflet(this.platformId);
+    if (!this.L || typeof this.L.map !== 'function') return;
     const L = this.L;
 
     this.map = L.map(this.mapContainer.nativeElement, { zoomControl: false }).setView([0, 0], 2);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(this.map);
+    L.tileLayer(AppConstants.MAP.TILES.ARCGIS_DARK, {
+      maxNativeZoom: 16,
+      maxZoom: 19,
+      attribution: AppConstants.MAP.ATTRIBUTION.ARCGIS
+    }).addTo(this.map);
     
     this.pathLine = L.polyline([], { color: '#10b981', weight: 4, opacity: 0.7 }).addTo(this.map);
   }
