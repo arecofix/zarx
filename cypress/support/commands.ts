@@ -20,23 +20,50 @@ declare global {
   }
 }
 
+let currentUserSession: any = null;
+
+export function getCurrentUserSession() {
+  return currentUserSession;
+}
+
+export function setCurrentUserSession(session: any) {
+  currentUserSession = session;
+}
+
 Cypress.Commands.add('loginAs', (role: 'user' | 'admin', name = 'Ezequiel Enrico areco', id = '9da10a3a-e000-4a5e-8671-4f4c55266dbe') => {
+  const mockUser = {
+    id,
+    aud: 'authenticated',
+    role: 'authenticated',
+    email: role === 'admin' ? 'ezequielenrico15@gmail.com' : 'vecino@zarx.mil',
+    user_metadata: {
+      full_name: name,
+      name: name,
+      username: 'ezequiel',
+      role: role,
+      avatar_url: 'https://lh3.googleusercontent.com/a/ACg8ocKkl21J1Ea4bYMPQpV9MrxaGVSodo4aSMfaNvx1rjSHzxLOLwI8jQ=s96-c'
+    },
+    app_metadata: {
+      provider: 'email',
+      providers: ['email']
+    }
+  };
+
+  const sessionData = {
+    access_token: 'mock-jwt-c4isr-token',
+    refresh_token: 'mock-refresh-c4isr-token',
+    token_type: 'bearer',
+    expires_in: 3600,
+    expires_at: Math.floor(Date.now() / 1000) + 3600,
+    user: mockUser
+  };
+
+  currentUserSession = sessionData;
+
   cy.window().then((win) => {
     win.localStorage.setItem('hasSeenOnboarding', 'true');
-    const mockUser = {
-      id,
-      email: role === 'admin' ? 'ezequielenrico15@gmail.com' : 'vecino@zarx.mil',
-      user_metadata: {
-        full_name: name,
-        role: role,
-        avatar_url: 'https://lh3.googleusercontent.com/a/ACg8ocKkl21J1Ea4bYMPQpV9MrxaGVSodo4aSMfaNvx1rjSHzxLOLwI8jQ=s96-c'
-      }
-    };
-    win.localStorage.setItem('sb-auth-token', JSON.stringify({
-      user: mockUser,
-      token: 'mock-jwt-c4isr-token',
-      expires_at: Math.floor(Date.now() / 1000) + 3600
-    }));
+    win.localStorage.setItem('sb-db-auth-token', JSON.stringify(sessionData));
+    win.localStorage.setItem('sb-auth-token', JSON.stringify(sessionData));
   });
 });
 
@@ -152,20 +179,38 @@ Cypress.Commands.add('mockSupabase', (route?: string, body?: any, status = 200) 
   }
 
   // Standard Mock endpoints for Supabase
-  cy.intercept('GET', '**/rest/v1/profiles*', {
-    statusCode: 200,
-    body: [
-      {
-        id: '9da10a3a-e000-4a5e-8671-4f4c55266dbe',
-        full_name: 'Ezequiel Enrico areco',
-        role: 'admin',
-        rank: 'Director C4ISR',
-        display_id: 'ZARX-0001',
-        avatar_url: 'https://lh3.googleusercontent.com/a/ACg8ocKkl21J1Ea4bYMPQpV9MrxaGVSodo4aSMfaNvx1rjSHzxLOLwI8jQ=s96-c',
-        reputation_score: 1000
-      }
-    ]
+  cy.intercept('GET', '**/rest/v1/profiles*', (req) => {
+    const userRole = currentUserSession?.user?.user_metadata?.role || (currentUserSession ? 'citizen' : 'admin');
+    const profile = {
+      id: currentUserSession?.user?.id || '9da10a3a-e000-4a5e-8671-4f4c55266dbe',
+      email: currentUserSession?.user?.email || 'ezequielenrico15@gmail.com',
+      full_name: currentUserSession?.user?.user_metadata?.full_name || 'Ezequiel Enrico areco',
+      username: currentUserSession?.user?.user_metadata?.username || 'ezequiel',
+      role: userRole,
+      rank: userRole === 'admin' ? 'Director C4ISR' : 'Cadete',
+      display_id: userRole === 'admin' ? 'ZARX-0001' : 'ZARX-0999',
+      avatar_url: 'https://lh3.googleusercontent.com/a/ACg8ocKkl21J1Ea4bYMPQpV9MrxaGVSodo4aSMfaNvx1rjSHzxLOLwI8jQ=s96-c',
+      reputation_score: userRole === 'admin' ? 1000 : 100
+    };
+    if (req.headers['accept']?.includes('vnd.pgrst.object+json')) {
+      req.reply({ statusCode: 200, body: profile });
+    } else {
+      req.reply({ statusCode: 200, body: [profile] });
+    }
   }).as('getProfiles');
+
+  cy.intercept('GET', '**/auth/v1/user*', (req) => {
+    if (currentUserSession?.user) {
+      req.reply({ statusCode: 200, body: currentUserSession.user });
+    } else {
+      req.reply({ statusCode: 401, body: { message: 'No session' } });
+    }
+  }).as('getAuthUser');
+
+  cy.intercept('POST', '**/auth/v1/logout*', (req) => {
+    currentUserSession = null;
+    req.reply({ statusCode: 200, body: {} });
+  }).as('authLogout');
 
   cy.intercept('GET', '**/rest/v1/zones*', {
     statusCode: 200,
@@ -239,6 +284,10 @@ Cypress.Commands.add('visitApp', (path = '/inicio') => {
   cy.visit(path, {
     onBeforeLoad(win) {
       win.localStorage.setItem('hasSeenOnboarding', 'true');
+      if (currentUserSession) {
+        win.localStorage.setItem('sb-db-auth-token', JSON.stringify(currentUserSession));
+        win.localStorage.setItem('sb-auth-token', JSON.stringify(currentUserSession));
+      }
     }
   });
 });

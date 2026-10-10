@@ -30,19 +30,22 @@ describe('08 - Ezequiel Enrico Areco Profile & Identity Verification', () => {
   });
 
   it('renders fallback avatar gracefully when image source is invalid or fails to load', () => {
-    cy.intercept('GET', '**/rest/v1/profiles*', {
-      statusCode: 200,
-      body: [
-        {
-          id: '9da10a3a-e000-4a5e-8671-4f4c55266dbe',
-          full_name: 'Ezequiel Enrico areco',
-          role: 'admin',
-          rank: 'Director C4ISR',
-          display_id: 'ZARX-0001',
-          avatar_url: 'https://invalid-non-existent-domain.com/broken_avatar.jpg',
-          reputation_score: 1000
-        }
-      ]
+    const brokenProfile = {
+      id: '9da10a3a-e000-4a5e-8671-4f4c55266dbe',
+      full_name: 'Ezequiel Enrico areco',
+      username: 'ezequiel',
+      role: 'admin',
+      rank: 'Director C4ISR',
+      display_id: 'ZARX-0001',
+      avatar_url: 'https://invalid-non-existent-domain.com/broken_avatar.jpg',
+      reputation_score: 1000
+    };
+    cy.intercept('GET', '**/rest/v1/profiles*', (req) => {
+      if (req.headers['accept']?.includes('vnd.pgrst.object+json')) {
+        req.reply({ statusCode: 200, body: brokenProfile });
+      } else {
+        req.reply({ statusCode: 200, body: [brokenProfile] });
+      }
     }).as('getBrokenProfile');
 
     cy.loginAs('admin', 'Ezequiel Enrico areco');

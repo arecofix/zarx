@@ -191,7 +191,7 @@ export class UserProfileComponent implements OnInit {
   displayName = computed(() => {
     const prof = this.profile();
     const userMeta = this.auth.currentUser()?.user_metadata;
-    return prof?.username || prof?.full_name || this.authName() || userMeta?.['full_name'] || userMeta?.['name'] || 'Agente';
+    return prof?.full_name || prof?.username || this.authName() || userMeta?.['full_name'] || userMeta?.['name'] || 'Agente';
   });
 
   displayId = computed(() => {
@@ -399,8 +399,9 @@ export class UserProfileComponent implements OnInit {
     this.router.navigate(['/admin/dashboard']);
   }
 
-  logout() {
-    this.auth.signOut();
+  async logout() {
+    await this.auth.signOut();
+    this.router.navigate(['/auth/login']);
   }
 
   async deleteAccount() {
